@@ -80,3 +80,32 @@ def get_score(user_id):
     conn.close()
 
     return result
+
+def delete_log(user_id, log_id):
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+    c.execute('''
+        SELECT physical, knowledge, mental FROM logs
+        WHERE user_id = ? and id = ?;
+    ''',(user_id, log_id))
+    scores = c.fetchone()
+    physical = scores[0]
+    knowledge = scores[1]
+    mental = scores[2]
+
+    c.execute('''
+        DELETE FROM logs
+        WHERE user_id = ? and id = ?;
+    ''', (user_id, log_id))
+    conn.commit()
+
+    c.execute('''
+        UPDATE users SET 
+        t_physical = t_physical - ?,
+        t_knowledge = t_knowledge-+ ?,
+        t_mental = t_mental - ?
+        WHERE user_id = ?
+    ''', (physical, knowledge, mental, user_id))
+    conn.commit()
+    conn.close()
+

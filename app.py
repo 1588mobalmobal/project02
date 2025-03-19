@@ -58,5 +58,12 @@ def handle_llm_request():
     }
     return jsonify(response), 200
 
+@app.route('/delete')
+def delete_log():
+    user_id = request.args.get('user_id')
+    log_id = request.args.get('log_id')
+    db.delete_log(user_id=user_id, log_id=log_id)
+    return 'delete'
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5252, debug=True)
