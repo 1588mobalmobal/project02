@@ -6,7 +6,9 @@
     <title>Document</title>
 </head>
 <body>
-    <h1>Title</h1>
-    {{score}}
+    <h1>Browse</h1>
+    {% for log in logs %}
+    <h3> {{log[0]}} </h3>
+    {% endfor %}
 </body>
 </html>
