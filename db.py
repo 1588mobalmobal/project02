@@ -1,6 +1,7 @@
 import sqlite3
 from datetime import datetime
 
+# 최초 실행 시 DB 초기화 
 def init_db():
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
@@ -13,7 +14,8 @@ def init_db():
               advice TEXT, 
               physical INTEGER, 
               knowledge INTEGER, 
-              mental INTEGER, 
+              mental INTEGER,
+              v_index INTEGER,
               timestamp TEXT);
 
 
@@ -31,16 +33,17 @@ def init_db():
     conn.commit()
     conn.close()
 
-def save_logs(user_input, encouragement, advice, physical, knowledge, mental):
+# 사용자의 일기와 조언 및 점수를 저장하는 기능 
+def save_logs(user_input, encouragement, advice, physical, knowledge, mental, v_index):
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
     timestamp = datetime.now().isoformat()
     c.execute('''
               INSERT INTO logs 
-              (user_id, user_input, encouragement, advice, physical, knowledge, mental, timestamp)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+              (user_id, user_input, encouragement, advice, physical, knowledge, mental, v_index, timestamp)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
               ''',
-              (1, user_input, encouragement, advice, physical, knowledge, mental, timestamp)
+              (1, user_input, encouragement, advice, physical, knowledge, mental, v_index, timestamp)
               )
     conn.commit()
     c.execute('''
@@ -55,6 +58,7 @@ def save_logs(user_input, encouragement, advice, physical, knowledge, mental):
     conn.commit()
     conn.close()
 
+# 사용자의 기록을 가져오는 기능 
 def get_logs(user_id):
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
@@ -68,6 +72,7 @@ def get_logs(user_id):
 
     return [row for row in result]
 
+# 사용자의 점수를 가져오는 기능 
 def get_score(user_id):
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
@@ -81,6 +86,20 @@ def get_score(user_id):
 
     return result
 
+def get_log_by_vector(indices):
+    result = []
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+    for idx in indices[0]:
+        idx = int(idx)
+        if idx != -1:
+            c.execute("select user_input from logs where v_index = ? ;", (idx,))
+            result.append(c.fetchone())
+    conn.close()
+
+    return result
+
+# 사용자의 기록을 삭제하고 점수를 환원하는 기능 
 def delete_log(user_id, log_id):
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
@@ -102,7 +121,7 @@ def delete_log(user_id, log_id):
     c.execute('''
         UPDATE users SET 
         t_physical = t_physical - ?,
-        t_knowledge = t_knowledge-+ ?,
+        t_knowledge = t_knowledge - ?,
         t_mental = t_mental - ?
         WHERE user_id = ?
     ''', (physical, knowledge, mental, user_id))

@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, render_template
 import json
 import db
 import llm
+import embed
 
 app = Flask(__name__)
 
@@ -33,10 +34,14 @@ def handle_llm_request():
         return jsonify({"error": "No input provided"}), 400
     
     user_input = data['input']
+
+    # Embedding 모델 실행 및 벡터 받기
+    embedding = embed.get_embedding(user_input)
+    # Embedding 벡터 스토어에 저장 및 인덱스 받기
+    v_index = embed.store_vector(embedding)
     
     # LLM 모델 실행
-    llm_output = llm.get_llm_response(user_input)
-    print(llm_output)
+    llm_output = llm.get_log_response(user_input)
 
     encouragement = json.loads(llm_output)['격려']
     advice = json.loads(llm_output)['조언']
@@ -44,8 +49,8 @@ def handle_llm_request():
     knowledge = json.loads(llm_output)['지식']
     mental = json.loads(llm_output)['정신력']
 
-    # DB에 저장
-    db.save_logs(user_input, encouragement, advice, physical, knowledge, mental)
+    # 출력과 vector index 결합하여 DB에 저장
+    db.save_logs(user_input, encouragement, advice, physical, knowledge, mental, v_index)
     
     # 클라이언트에 JSON 응답 반환
     response = {
@@ -57,6 +62,25 @@ def handle_llm_request():
         "timestamp": db.datetime.now().isoformat()
     }
     return jsonify(response), 200
+
+@app.route('/chat', methods = ['POST'])
+def chatting():
+    data = request.get_json()
+    if not data or 'chat' not in data:
+        return jsonify({"error": "No chat provided"}), 400
+    
+    chat = data['chat']
+
+    embedding = embed.get_embedding(chat)
+    _, indices = embed.search_vector_store(embedding)
+    
+    logs = db.get_log_by_vector(indices)
+
+    llm_output = llm.get_chat_response(user_input=chat, prompt_input=logs)
+
+    return jsonify(llm_output), 200
+
+
 
 @app.route('/delete')
 def delete_log():
