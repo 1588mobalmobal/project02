@@ -4,5 +4,5 @@
  1. python, html/css/js
  2. Flask 라이브러리
  3. gemma3 4b 모델
- 4. ollama, lang-chain
+ 4. ollama, lang-chain, faiss
  5. sqlite
