@@ -12,7 +12,19 @@ db.init_db()
 def home():
     user_id = request.args.get('user_id')
     score = db.get_score(user_id)
-    return render_template('home.html', score=score)
+    return render_template('index.html', score=score)
+
+@app.route('/write')
+def write():
+    return "일기작성 페이지입니다."
+
+@app.route('/status')
+def status():
+    return "상태창 페이지입니다."
+
+@app.route('/diary')
+def diary():
+    return "일기기록확인 페이지입니다."
 
 @app.route('/log', methods = ['GET'])
 def log():
