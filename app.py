@@ -2,6 +2,13 @@ from flask import Flask, request, jsonify, render_template
 import json
 import db
 import llm
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+import sqlite3
+
+import io
+import base64
 
 app = Flask(__name__)
 
@@ -57,6 +64,24 @@ def handle_llm_request():
         "timestamp": db.datetime.now().isoformat()
     }
     return jsonify(response), 200
+
+@app.route('/weekly_chart')
+def weekly_chart():
+    
+    data = db.get_weekly_data(1)
+    # if not data:
+    #     return "No data available for this user."
+
+    # df = pd.DataFrame(data, columns=['physical', 'knowledge', 'mental', 'week'])
+    # df = df.groupby('week').sum().reset_index()
+
+    # chart_data = [["Week", "Physical", "Knowledge", "Mental"]]
+    # for index, row in df.iterrows():
+    #     chart_data.append([row['week'], row['physical'], row['knowledge'], row['mental']])
+    
+    
+    return render_template('weekly_chart.html', data=data)
+
 
 @app.route('/delete')
 def delete_log():

@@ -9,8 +9,8 @@ def init_db():
               (id INTEGER PRIMARY KEY AUTOINCREMENT,
               user_id INTEGER, 
               user_input TEXT, 
-              encouragement TEXT, 
-              advice TEXT, 
+         TEXT, 
+         TEXT, 
               physical INTEGER, 
               knowledge INTEGER, 
               mental INTEGER, 
@@ -31,16 +31,16 @@ def init_db():
     conn.commit()
     conn.close()
 
-def save_logs(user_input, encouragement, advice, physical, knowledge, mental):
+def save_logs(user_input, physical, knowledge, mental):
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
     timestamp = datetime.now().isoformat()
     c.execute('''
               INSERT INTO logs 
-              (user_id, user_input, encouragement, advice, physical, knowledge, mental, timestamp)
+              (user_id, user_input, physical, knowledge, mental, timestamp)
               VALUES (?, ?, ?, ?, ?, ?, ?, ?)
               ''',
-              (1, user_input, encouragement, advice, physical, knowledge, mental, timestamp)
+              (1, user_input, physical, knowledge, mental, timestamp)
               )
     conn.commit()
     c.execute('''
@@ -59,7 +59,7 @@ def get_logs(user_id):
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
     c.execute('''
-        SELECT user_input, encouragement, advice, physical, knowledge, mental, timestamp
+        SELECT user_input, physical, knowledge, mental, timestamp
         FROM logs
         WHERE user_id = ?;
     ''', user_id)
@@ -71,15 +71,30 @@ def get_logs(user_id):
 def get_score(user_id):
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
-    c.execute('''
-        SELECT t_physical, t_knowledge, t_mental
-        FROM users
-        WHERE user_id = ?;
-    ''', user_id)
+    # c.execute('''
+    #     SELECT t_physical, t_knowledge, t_mental
+    #     FROM users
+    #     WHERE user_id = ?;
+    # ''', user_id)
+    c.execute("SELECT physical, knowledge, mental FROM logs WHERE user_id = ?", (user_id,))
     result = c.fetchone()
     conn.close()
 
     return result
+
+def get_weekly_data(user_id):
+    """주 단위 데이터 가져오기"""
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+    c.execute('''
+        SELECT physical, knowledge, mental, strftime('%Y-%W', timestamp) as week
+        FROM logs
+        WHERE user_id = ?
+        ORDER BY timestamp ASC;
+    ''', (user_id,))
+    result = c.fetchall()
+    conn.close()
+    return [log for log in result]
 
 def delete_log(user_id, log_id):
     conn = sqlite3.connect('database.db')

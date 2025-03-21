@@ -1,45 +1,24 @@
-import streamlit as st
 import pandas as pd
-from visualization import create_visualizations
+import numpy as np
+import random
+import string
+from datetime import datetime, timedelta
 
-st.title('대시보드')
+def generate_random_string(length=6):
+    """지정된 길이의 랜덤 영문 문자열 생성"""
+    letters = string.ascii_lowercase
+    return ''.join(random.choice(letters) for i in range(length))
 
-user_id = st.text_input("user_id를 입력하세요")
+def generate_sequential_dates(start_date, end_date):
+    """지정된 범위 내의 순차적인 날짜 리스트 생성"""
+    date_list = []
+    current_date = start_date
+    while current_date <= end_date:
+        date_list.append(current_date.strftime('%Y-%m-%d'))
+        current_date += timedelta(days=1)
+    return date_list
 
-if user_id:
-    # 실제 db 연동시에는 아래의 주석을 해제하고 사용
-    # logs = db.get_logs(user_id)
-    # if logs:
-    #     df = pd.DataFrame(logs, columns=['user_input', 'encouragement', 'advice', 'physical', 'knowledge', 'mental', 'timestamp'])
-    #     df['timestamp'] = pd.to_datetime(df['timestamp'])
-    #     img_line, img_bar, img_wordcloud, img_heatmap = create_visualizations(df)
-    #
-    #     st.plotly_chart(img_line)
-    #     st.plotly_chart(img_bar)
-    #     st.image(img_wordcloud, caption='워드 클라우드')
-    #     st.plotly_chart(img_heatmap)
-    # else:
-    #     st.write("해당 user_id의 로그가 없습니다.")
-    st.write("db모듈이 없으므로 임의의 데이터를 사용합니다.")
-    import numpy as np
-    import random
-    import string
-    from datetime import datetime, timedelta
-
-    def generate_random_string(length=6):
-        """지정된 길이의 랜덤 영문 문자열 생성"""
-        letters = string.ascii_lowercase
-        return ''.join(random.choice(letters) for i in range(length))
-
-    def generate_sequential_dates(start_date, end_date):
-        """지정된 범위 내의 순차적인 날짜 리스트 생성"""
-        date_list = []
-        current_date = start_date
-        while current_date <= end_date:
-            date_list.append(current_date.strftime('%Y-%m-%d'))
-            current_date += timedelta(days=1)
-        return date_list
-
+def generate_data():
     # 날짜 범위 설정
     start_date = datetime(2025, 1, 1)
     end_date = datetime(2025, 3, 20)
@@ -63,7 +42,7 @@ if user_id:
 
     data = {
         'id': [generate_random_string() for _ in range(num_rows)],
-        'user_id': [generate_random_string() for _ in range(num_rows)],
+        'user_id': [random.randint(0, 10) for _ in range(num_rows)], # user_id를 0~10 사이의 랜덤 정수로 생성
         'user_input': [random.choice(diary_entries) for _ in range(num_rows)],
         'physical': np.random.randint(0, 3, num_rows),
         'knowledge': np.random.randint(0, 3, num_rows),
@@ -74,13 +53,8 @@ if user_id:
     # 데이터프레임 생성
     df = pd.DataFrame(data)
     df['timestamp'] = pd.to_datetime(df['timestamp'])
-    img_line, img_bar, img_wordcloud, img_heatmap = create_visualizations(df)
+    return df
 
-    st.plotly_chart(img_line)
-    st.plotly_chart(img_bar)
-    st.image(img_wordcloud, caption='워드 클라우드')
-    st.plotly_chart(img_heatmap)
-
-else:
-    
-    st.write("user_id를 입력해주세요.")
+if __name__ == "__main__":
+    df = generate_data()
+    print(df.head())
