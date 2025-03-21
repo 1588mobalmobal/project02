@@ -87,7 +87,7 @@ def get_weekly_data(user_id):
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
     c.execute('''
-        SELECT physical, knowledge, mental, strftime('%Y-%W', timestamp) as week
+        SELECT physical, knowledge, mental, strftime('%Y-%m-%d', timestamp) as date
         FROM logs
         WHERE user_id = ?
         ORDER BY timestamp ASC;

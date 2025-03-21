@@ -10,6 +10,9 @@ import sqlite3
 import io
 import base64
 
+import matplotlib
+matplotlib.use('Agg')
+
 app = Flask(__name__)
 
 # 데이터베이스 초기화
@@ -67,20 +70,33 @@ def handle_llm_request():
 
 @app.route('/weekly_chart')
 def weekly_chart():
-    
-    data = db.get_weekly_data(1)
-    # if not data:
-    #     return "No data available for this user."
+    user_id = request.args.get('user_id')
+    data = db.get_weekly_data(user_id)
+    if not data:
+        return "No data available for this user."
 
-    # df = pd.DataFrame(data, columns=['physical', 'knowledge', 'mental', 'week'])
-    # df = df.groupby('week').sum().reset_index()
+    df = pd.DataFrame(data, columns=['physical', 'knowledge', 'mental', 'date'])
+    df['date'] = pd.to_datetime(df['date'])  # 날짜 형식으로 변환
+    df = df.set_index('date').cumsum().reset_index()
 
-    # chart_data = [["Week", "Physical", "Knowledge", "Mental"]]
-    # for index, row in df.iterrows():
-    #     chart_data.append([row['week'], row['physical'], row['knowledge'], row['mental']])
+    plt.figure(figsize=(10, 6))
+    plt.plot(df['date'], df['physical'], label='Physical')
+    plt.plot(df['date'], df['knowledge'], label='Knowledge')
+    plt.plot(df['date'], df['mental'], label='Mental')
+    plt.title('Cumulative Scores by Date')
+    plt.xlabel('Date')
+    plt.ylabel('Score')
+    plt.legend()
+    plt.grid(True)
+    plt.xticks(rotation=45)  # x축 레이블 회전
     
-    
-    return render_template('weekly_chart.html', data=data)
+    img = io.BytesIO()
+    plt.savefig(img, format='png')
+    img.seek(0)
+    plot_url = base64.b64encode(img.getvalue()).decode('utf8')
+    plt.close()
+
+    return render_template('weekly_chart.html', plot_url=plot_url)
 
 
 @app.route('/delete')

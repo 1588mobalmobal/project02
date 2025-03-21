@@ -1,9 +1,7 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weekly Plot</title>
+    <title>Weekly Chart</title>
     <style>
         body {
             font-family: sans-serif;
@@ -25,14 +23,9 @@
         }
     </style>
 </head>
-
 <body>
-    <h1>Weekly Plot</h1>
     <div class="chart-container">
-        <img src="data:image/png;base64,{{ plot_url }}" alt="Weekly Plot">
-        {% for log in data%}
-        <h3>{{log}}</h3>
-        {% endfor %}
+        <img src="data:image/png;base64,{{ plot_url }}" alt="Cumulative Scores by Date">
     </div>
 </body>
 </html>
