@@ -13,7 +13,7 @@ db.init_db()
 def home():
     user_id = request.args.get('user_id')
     score = db.get_score(user_id)
-    return render_template('home.html', score=score) # 튜플 아니면 리스트 
+    return render_template('index.html', score=score) # 튜플 아니면 리스트 
 
 @app.route('/log', methods = ['GET'])
 def log():
