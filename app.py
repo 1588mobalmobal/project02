@@ -68,8 +68,8 @@ def handle_llm_request():
     }
     return jsonify(response), 200
 
-@app.route('/weekly_chart')
-def weekly_chart():
+@app.route('/dashboard')
+def dashboard():
     user_id = request.args.get('user_id')
     data = db.get_weekly_data(user_id)
     if not data:
@@ -80,23 +80,20 @@ def weekly_chart():
     df = df.set_index('date').cumsum().reset_index()
 
     plt.figure(figsize=(10, 6))
-    plt.plot(df['date'], df['physical'], label='Physical')
-    plt.plot(df['date'], df['knowledge'], label='Knowledge')
-    plt.plot(df['date'], df['mental'], label='Mental')
+    sns.lineplot(x='date', y='value', hue='variable', 
+                 data=pd.melt(df, ['date'], var_name='variable', value_name='value'))
     plt.title('Cumulative Scores by Date')
     plt.xlabel('Date')
     plt.ylabel('Score')
-    plt.legend()
-    plt.grid(True)
     plt.xticks(rotation=45)  # x축 레이블 회전
-    
+
     img = io.BytesIO()
     plt.savefig(img, format='png')
     img.seek(0)
     plot_url = base64.b64encode(img.getvalue()).decode('utf8')
     plt.close()
 
-    return render_template('weekly_chart.html', plot_url=plot_url)
+    return render_template('dashboard.html', plot_url=plot_url)
 
 
 @app.route('/delete')
