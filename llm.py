@@ -1,5 +1,7 @@
-from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate, PromptTemplate
 from langchain_ollama.llms import OllamaLLM
+from langchain_core.runnables import RunnableSequence, RunnableLambda
+import json
 
 llm_instance = None
 
@@ -9,7 +11,7 @@ def init_llm():
         llm_instance = OllamaLLM(model="exaone3.5:7.8b", temperature=0.1, num_predict=300, format='json')
     return llm_instance
 
-def get_llm_response(user_input):
+def get_log_response(user_input):
     # 로컬 Ollama 모델 설정 (예: 'llama3' 모델 사용)
     model = init_llm()
     system_message_prompt = SystemMessagePromptTemplate.from_template(
@@ -21,7 +23,7 @@ def get_llm_response(user_input):
     지식: 독서/학습활동 미수행 = 0점 / 중간 강도 학습활동 수행 = 1점 / 장시간 고강도 학습활동 수행 = 2점
     정신력: 정신적-육체적 에너지 미소모 = 0점 / 불편과 번거로움을 이겨냄 = 1점 / 가혹한 환경을 이겨냄 = 2점
     다음 출력 양식을 지켜주세요.
-    ["격려" : 격려 내용, "조언" : 조언 내용, "체력" : 체력 점수, "지식" : 지식 점수 "정신력" : 정신력 점수]
+    ["격려" : 격려 내용, "조언" : 조언 내용, "체력" : 체력 점수, "지식" : 지식 점수, "정신력" : 정신력 점수]
     감사합니다.
     '''
     )
@@ -36,3 +38,43 @@ def get_llm_response(user_input):
     response = chain.invoke(user_input)
 
     return response
+
+def get_chat_response(user_input, prompt_input):
+
+    # 로컬 Ollama 모델 설정 
+    model = init_llm()
+
+    first_prompt = PromptTemplate.from_template(
+        ''' 
+        다음 기록은 사용자의 입력에 관련된 사용자의 과거 기록입니다.
+        기록들: {input}
+        사용자는 어떤 성격과 말투를 가졌는지 말해주세요.
+        출력양식은 다음과 같습니다.
+        "character" : 성격과 말투
+        '''
+    )
+
+    second_prompt = PromptTemplate.from_template(
+        '''
+            사용자의 말투와 성격은 다음과 같습니다.
+            정보: {first_result}
+
+            당신은 유쾌하고 장난기 많은 친구처럼 두문장 이내로 대답해주세요. 말투는 반말로 하고, 농담을 섞어주세요.
+            대화: {user_input}
+    
+            출력 양식은 다음과 같습니다.
+            "reply" : 답변
+
+        '''
+    )
+
+    chain = RunnableSequence(
+        first_prompt,
+        model,
+        RunnableLambda(lambda x: {"first_result": x, "user_input" : user_input}),
+        second_prompt,
+        model
+    )
+
+    result = chain.invoke({"input": prompt_input})
+    return result

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Vendor CSS Files -->
+    <link href="{{url_for('static', filename = 'vendor/bootstrap/css/bootstrap.min.css')}}" rel="stylesheet">
+    <link href="{{url_for('static', filename = 'vendor/bootstrap-icons/bootstrap-icons.css')}}" rel="stylesheet">
+    <script type="text/javascript" src="{{url_for('static', filename = 'js/chat.js')}}"></script>
+    <title>Document</title>
+</head>
+<body>
+    <!-- 상단 바 -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+        <div class="container-fluid">
+            <div class="d-flex align-items-center">
+                <button class="btn" onclick="location.href='/'">
+                    <i class="bi bi-arrow-left"></i>
+                </button>
+                <a class="navbar-brand" href="#">나와의 채팅</a>
+            </div>
+        </div>
+        
+    </nav>
+    
+    <!-- 채팅 존 -->
+    <div class="container chat-container p-3 p-md-6" style="margin-top: 40px; overflow-y: auto;">
+        
+        
+    </div>
+
+    <!-- 입력창 -->
+    <div class="fixed-bottom p-2 bg-light">
+        <div class="container">
+            <div class="input-group">
+                <input type="text" class="form-control" id="chat_input" aria-label="채팅 입력">
+                <button class="btn btn-primary" type="button" onclick="sendMessage()">전송</button>
+            </div>
+        </div>
+    </div>
+
+
+
+    <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+</body>
+</html>
