@@ -66,7 +66,7 @@ def get_logs(user_id):
         SELECT user_input, encouragement, advice, physical, knowledge, mental, timestamp
         FROM logs
         WHERE user_id = ?;
-    ''', user_id)
+    ''', (user_id))
     result = c.fetchall()
     conn.close()
 

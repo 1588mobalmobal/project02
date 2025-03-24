@@ -6,27 +6,33 @@ import embed
 
 app = Flask(__name__)
 
+user_id = '1'
+
 # 데이터베이스 초기화
 db.init_db()
 
 @app.route('/', methods = ['GET'])
 def home():
-    user_id = request.args.get('user_id')
+    # user_id = request.args.get('user_id')
     score = db.get_score(user_id)
-    return render_template('index.html', score=score) # 튜플 아니면 리스트 
+    return render_template('index.html', score=score, user_id=user_id) # 튜플 아니면 리스트 
 
-@app.route('/log', methods = ['GET'])
+@app.route('/write', methods = ['GET'])
 def log():
-    return render_template('log.html')
+    return render_template('write.html')
 
 @app.route('/browse', methods = ['GET'])
 def browse():
-    user_id = request.args.get('user_id')
+    # user_id = request.args.get('user_id')
     logs = db.get_logs(user_id)
     # print(logs)
     return render_template('browse.html', logs=logs)
 
-@app.route('/api/llm', methods=['POST'])
+@app.route('/history', methods = ['GET'])
+def history():
+    return render_template('history.html')
+
+@app.route('/api/log', methods=['POST'])
 def handle_llm_request():
     # 클라이언트로부터 JSON 데이터 받기
     data = request.get_json()
@@ -63,7 +69,11 @@ def handle_llm_request():
     }
     return jsonify(response), 200
 
-@app.route('/chat', methods = ['POST'])
+@app.route('/chat', methods = ['GET'])
+def chat():
+    return render_template('chat.html')
+
+@app.route('/api/chat', methods = ['POST'])
 def chatting():
     data = request.get_json()
     if not data or 'chat' not in data:

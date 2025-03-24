@@ -1,0 +1,79 @@
+body {
+    font-family: sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: ivory;
+  }
+  
+  .container {
+    width: 700px;
+    height: 70%;
+    padding: 20px;
+    margin: 10px;
+    background-color: white;
+    border-radius: 8px;
+    border-style: solid;
+    border-color: rgb(106, 211, 176);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  h1 {
+    text-align: center;
+    margin-bottom: 20px;
+    /*background-color: white;*/
+  }
+  
+  #diaryDate, #diaryContent {
+    width: calc(100% - 2px);
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid gray;
+    border-radius: 4px;
+    box-sizing: border-box;
+
+  }
+  
+  #diaryContent {
+    height: 60%;
+    resize: vertical;
+    background-color: white;
+  }
+  
+  #saveButton {
+    width: 20%;
+    padding: 10px;
+    background-color: rgb(2, 163, 2);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    float: right;
+    cursor: pointer;
+  }
+
+  #homeButton {
+    width: 20%;
+    padding: 10px;
+    background-color: rgb(2, 163, 2);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    float: left;
+    cursor: pointer;
+  }
+
+  
+  #diaryList {
+    margin-top: 20px;
+    background-color: beige;
+  }
+  
+  .diary-item {
+    border: 1px solid #ddd;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+  }
