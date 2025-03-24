@@ -31,6 +31,10 @@ def init_db():
     conn.close()
 
 def save_logs(user_input, encouragement, advice, physical, knowledge, mental, v_index):
+    physical = int(physical)
+    knowledge = int(knowledge)
+    mental = int(mental)
+
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
     timestamp = datetime.now().isoformat()
@@ -82,25 +86,21 @@ def get_score_change(user_id):
     try:
         conn = sqlite3.connect('database.db')
         c = conn.cursor()
+        # 가장 최근 로그의 점수를 가져옴
         c.execute('''
             SELECT physical, knowledge, mental
             FROM logs
             WHERE user_id = ?
             ORDER BY timestamp DESC
-            LIMIT 2;
+            LIMIT 1;
         ''', (int(user_id),))
-        logs = c.fetchall()
+        result = c.fetchone()
         conn.close()
 
-        if len(logs) < 2:
+        if result is None:
             return (0, 0, 0)
         
-        latest = logs[0]
-        previous = logs[1]
-        change_physical = latest[0] - previous[0]
-        change_knowledge = latest[1] - previous[1]
-        change_mental = latest[2] - previous[2]
-        return (change_physical, change_knowledge, change_mental)
+        return (result[0], result[1], result[2])
     except Exception as e:
         print(f"Error in get_score_change: {e}")
         return (0, 0, 0)
@@ -124,11 +124,11 @@ def delete_log(user_id, log_id):
         c.execute('''
             SELECT physical, knowledge, mental FROM logs
             WHERE user_id = ? and id = ?;
-        ''', (int(user_id), int(log_id)))  # log_id도 정수형으로 변환
+        ''', (int(user_id), int(log_id)))
         scores = c.fetchone()
         if scores is None:
             conn.close()
-            return  # 데이터가 없으면 종료
+            return
         
         physical = scores[0]
         knowledge = scores[1]
