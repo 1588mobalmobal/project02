@@ -1,35 +1,62 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
-    <title>Document</title>
-    <style>
-        div{
-            background-color: aliceblue;
-            height:700px;
-            border: 2px slid black;
-            margin: 1px;
-            display: flex;
-            flex-direction: row;
-        }
-        #parent{
-            background-color: palegreen;
-            justify-content: space-evenly;
-            align-items:center;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- displays site properly based on user's device -->
+
+  <link rel="icon" type="image/png" sizes="32x32" href="./images/favicon-32x32.png">
+
+  <link rel="stylesheet" href="./git_css/proj2_test_git.css">
+  
+  <title>Advice Page</title>
+
+  <style>
+    .attribution { font-size: 11px; text-align: center; }
+    .attribution a { color: hsl(228, 45%, 44%); }
+  </style>
 </head>
 <body>
-    <nav>project2</nav>
-    <h2>Advice page</h2>
-    <div id="parent">
-    <div class="w3-third">summary
-        <p>dkfjdkfdfj</p>
+  <nav>hello</nav>
+  <main class="box-container">
+    <div class="box1 boxes">
+      <div class="circle">
+        <img src="images/icon-sedans.svg" alt="Sedan">
+      </div>
+      <h1>Summary</h1>
+      <p>
+        Choose a sedan for its affordability and excellent fuel economy. Ideal for cruising in the city 
+        or on your next road trip.
+      </p>
+      <button>Learn More</button>
     </div>
-    <div class="w3-third">advice</div>
-    <div class="w3-third">score</div>
+
+    <div class="box2 boxes">
+      <div class="circle">
+        <img src="images/advice.png" width="40", height="40" alt="advice">
+      </div>
+      <h1>advice</h1>
+      <p>
+        Take an SUV for its spacious interior, power, and versatility. Perfect for your next family vacation 
+        and off-road adventures.
+      </p>
+      <button>Learn More</button>
     </div>
+    
+    <div class="box3 boxes">
+      <div class="circle">
+        <img src="images/icon-luxury.svg" alt="Luxury">
+      </div>
+      <h1>score</h1>
+      <p> <!--나중에 값 받아와야하는 부분-->
+	  	체력이 1만큼 증가하였습니다.
+		정신력이 1만큼 증가하였습니다.
+		근력이 1만큼 증가하였습니다.
+		문장 수가 다르면
+		칸이 크기가 달라지는 현상이..
+      </p>
+      <button>Learn More</button>
+    </div>
+  </main>
+  	
 </body>
 </html>

@@ -65,5 +65,10 @@ def delete_log():
     db.delete_log(user_id=user_id, log_id=log_id)
     return 'delete'
 
+## 일기 작성 ##
+@app.route('/writeDiary')
+def writeDiary():
+    return render_template('write.html')    
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5252, debug=True)

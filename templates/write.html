@@ -4,16 +4,43 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Document</title>
-  <link rel="stylesheet" href="../static/write.css">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="../static/js/write_modal.js" defer></script>
+  <link rel="stylesheet" href="../static/css/write.css">
+  <link rel="stylesheet" href="../static/css/write_modal.css">
 </head>
 <body>
   <div class="container">
-    <h1>나의 일기</h1>
+    <h1>Diary</h1> <!--제목 지을 수 있게?-->
     <input type="date" id="diaryDate">
     <textarea id="diaryContent" placeholder="오늘 하루는 어떠셨나요?"></textarea>
-    <button id="saveButton">저장</button>
-    <div id="diaryList"></div>
+    <button id="homeButton" onClick="location.href='/'">홈</button>
+    <button id="saveButton" onclick="modal('dialog')">저장</button>
   </div>
-  <!-- javascript-->
+  
+  <!-- 평가/조언/점수 창 (모달 팝업)-->
+   <!-- 내용 입력 안해도 창 띄워짐짐-->
+  <div id="dialog" class="dialog">
+    <div class="tb">
+      <div class="inner" style="max-width:800px;">
+        <div class="top">
+          <div class="title">Summary</div>
+          <a href="#" class="modal-close">닫기</a>
+        </div>
+        <div class="ct">
+          <P class="marginchange"> 요약(평가) 및 조언</P>
+          오늘은 ~~했습니다<br>
+          목표를 모두 달성하셨습니다<br>
+          앞으로도 이대로만 하면 됩니다!<br>
+          어쩌구저쩌구<br>
+          계속 길게<br>
+        </div>
+        <div class="ct">
+          <p> 상태창</p>
+          분석 결과
+        </div>
+      </div>
+    </div>
+    
 </body>
 </html>
