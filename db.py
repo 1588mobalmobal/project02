@@ -1,7 +1,6 @@
 import sqlite3
 from datetime import datetime
 
-# 최초 실행 시 DB 초기화 
 def init_db():
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
@@ -17,8 +16,6 @@ def init_db():
               mental INTEGER,
               v_index INTEGER,
               timestamp TEXT);
-
-
               ''')
     conn.commit()
     conn.execute(
@@ -33,8 +30,11 @@ def init_db():
     conn.commit()
     conn.close()
 
-# 사용자의 일기와 조언 및 점수를 저장하는 기능 
 def save_logs(user_input, encouragement, advice, physical, knowledge, mental, v_index):
+    physical = int(physical)
+    knowledge = int(knowledge)
+    mental = int(mental)
+
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
     timestamp = datetime.now().isoformat()
@@ -58,7 +58,6 @@ def save_logs(user_input, encouragement, advice, physical, knowledge, mental, v_
     conn.commit()
     conn.close()
 
-# 사용자의 기록을 가져오는 기능 
 def get_logs(user_id):
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
@@ -66,13 +65,11 @@ def get_logs(user_id):
         SELECT user_input, encouragement, advice, physical, knowledge, mental, timestamp
         FROM logs
         WHERE user_id = ?;
-    ''', (user_id))
+    ''', (int(user_id),))
     result = c.fetchall()
     conn.close()
-
     return [row for row in result]
 
-# 사용자의 점수를 가져오는 기능 
 def get_score(user_id):
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
@@ -80,11 +77,33 @@ def get_score(user_id):
         SELECT t_physical, t_knowledge, t_mental
         FROM users
         WHERE user_id = ?;
-    ''', user_id)
+    ''', (int(user_id),))
     result = c.fetchone()
     conn.close()
-
     return result
+
+def get_score_change(user_id):
+    try:
+        conn = sqlite3.connect('database.db')
+        c = conn.cursor()
+        # 가장 최근 로그의 점수를 가져옴
+        c.execute('''
+            SELECT physical, knowledge, mental
+            FROM logs
+            WHERE user_id = ?
+            ORDER BY timestamp DESC
+            LIMIT 1;
+        ''', (int(user_id),))
+        result = c.fetchone()
+        conn.close()
+
+        if result is None:
+            return (0, 0, 0)
+        
+        return (result[0], result[1], result[2])
+    except Exception as e:
+        print(f"Error in get_score_change: {e}")
+        return (0, 0, 0)
 
 def get_log_by_vector(indices):
     result = []
@@ -96,35 +115,40 @@ def get_log_by_vector(indices):
             c.execute("select user_input from logs where v_index = ? ;", (idx,))
             result.append(c.fetchone())
     conn.close()
-
     return result
 
-# 사용자의 기록을 삭제하고 점수를 환원하는 기능 
 def delete_log(user_id, log_id):
-    conn = sqlite3.connect('database.db')
-    c = conn.cursor()
-    c.execute('''
-        SELECT physical, knowledge, mental FROM logs
-        WHERE user_id = ? and id = ?;
-    ''',(user_id, log_id))
-    scores = c.fetchone()
-    physical = scores[0]
-    knowledge = scores[1]
-    mental = scores[2]
+    try:
+        conn = sqlite3.connect('database.db')
+        c = conn.cursor()
+        c.execute('''
+            SELECT physical, knowledge, mental FROM logs
+            WHERE user_id = ? and id = ?;
+        ''', (int(user_id), int(log_id)))
+        scores = c.fetchone()
+        if scores is None:
+            conn.close()
+            return
+        
+        physical = scores[0]
+        knowledge = scores[1]
+        mental = scores[2]
 
-    c.execute('''
-        DELETE FROM logs
-        WHERE user_id = ? and id = ?;
-    ''', (user_id, log_id))
-    conn.commit()
+        c.execute('''
+            DELETE FROM logs
+            WHERE user_id = ? and id = ?;
+        ''', (int(user_id), int(log_id)))
+        conn.commit()
 
-    c.execute('''
-        UPDATE users SET 
-        t_physical = t_physical - ?,
-        t_knowledge = t_knowledge - ?,
-        t_mental = t_mental - ?
-        WHERE user_id = ?
-    ''', (physical, knowledge, mental, user_id))
-    conn.commit()
-    conn.close()
-
+        c.execute('''
+            UPDATE users SET 
+            t_physical = t_physical - ?,
+            t_knowledge = t_knowledge - ?,
+            t_mental = t_mental - ?
+            WHERE user_id = ?
+        ''', (physical, knowledge, mental, int(user_id)))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Error in delete_log: {e}")
+        conn.close()

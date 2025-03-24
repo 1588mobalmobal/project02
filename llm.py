@@ -8,7 +8,7 @@ llm_instance = None
 def init_llm():
     global llm_instance
     if llm_instance is None:
-        llm_instance = OllamaLLM(model="exaone3.5:7.8b", temperature=0.1, num_predict=300, format='json')
+        llm_instance = OllamaLLM(model="exaone3.5:2.4b", temperature=0.1, num_predict=300, format='json')
     return llm_instance
 
 def get_log_response(user_input):
