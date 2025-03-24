@@ -10,6 +10,8 @@ body {
     margin: 0;
     height: 100vh;
     overflow: hidden; /* 스크롤 방지 */
+    font-family: "Malgun Gothic", Arial, sans-serif;
+    /* font-family: 'Courier New', Courier, monospace; */
 }
 .Main {
     display: flex;
@@ -17,7 +19,7 @@ body {
     height: 100vh; /* 전체 화면 높이 */
 }
 .Talk-To-Me {
-    flex: 4; /* 4:4:2 비율의 첫 번째 부분 */
+    flex: 6; /* 4:4:2 비율의 첫 번째 부분 */
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -25,41 +27,50 @@ body {
     position: relative;
 }
 .Status-Memu-Container {
-    flex: 4; /* 4:4:2 비율의 두 번째 부분 */
+    flex: 3; /* 4:4:2 비율의 두 번째 부분 */
     display: flex;
     justify-content: center;
     align-items: center;
 }
 .Button {
-    flex: 2; /* 4:4:2 비율의 세 번째 부분 */
+    flex: 1; /* 4:4:2 비율의 세 번째 부분 */
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 20px;
+    width: 100%;
+    /* gap: 20px; */
 }
 .speech-bubble {
-    position: relative;
-    background: #ffffff;
+    position: absolute;
+    top: 8%;
+    right: 8%;
+    width: 50%;
+    height: 10%;
+    background: #ffbf00;
     border-radius: .4em;
+    border: 2px solid black;
     padding: 5px 10px;
     display: inline-block;
     margin-bottom: 10px;
+    font-size: 1.5rem;
+    text-align: center;
+    font-weight: bold;
+    color: black;
 }
-.speech-bubble:after {
-    content: '';
+.speech-bubble-tail {
     position: absolute;
-    bottom: 0;
-    left: 50%;
-    width: 0;
-    height: 0;
-    border: 10px solid transparent;
-    border-top-color: #ffffff;
-    border-bottom: 0;
-    margin-left: -10px;
-    margin-bottom: -10px;
+    rotate: 45deg;
+    top: 16%;
+    right: 24%;
+    width: 20px;
+    height: 20px;
+    background: #ffbf00;
+    border-right: 2px solid black;
+    border-bottom: 2px solid black;
 }
+
 .dogi-img {
-    max-width: 80%; /* 이미지 크기 조정 */
+    max-width: 100%; /* 이미지 크기 조정 */
     height: auto;
     cursor: pointer;
     display: block; /* 중앙 정렬을 위해 */
@@ -72,39 +83,49 @@ body {
     border-radius: 15px;
     border: 4px solid #34495e;
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
-    font-size: 1.2rem;
+    font-size: 2rem;
     text-align: left;
-    width: 90%; /* 상태창 크기 조정 */
+    font-weight: bold;
+    width: 90%;
+    height: 100%;
     max-width: 450px;
     display: flex;
     flex-direction: column;
+    justify-content: space-evenly;
     gap: 10px; /* 항목 간 간격 */
 }
 .Status-Memu span {
     display: flex;
     justify-content: space-between;
-    font-family: 'Courier New', Courier, monospace; /* 게임 느낌의 폰트 */
+    
 }
 .Status-Memu .value {
     color: #f1c40f; /* 노란색으로 값 강조 */
 }
 .Status-Memu .change {
+    align-items: center;
+    font-size: 1.4rem;
     color: #2ecc71; /* 초록색으로 변동 수치 강조 */
 }
+
+.button-container {
+    width: 90%;
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+}
+
 .Check-List, .Write-Diary {
     padding: 10px 20px;
-    font-size: 1.2rem;
-    border-radius: 25px; /* 둥근 버튼 */
-    transition: transform 0.2s; /* 호버 애니메이션 */
+    font-size: 1.5rem;
+    border-radius: 8px; /* 둥근 버튼 */
+    font-weight: bold;
 }
 .Check-List {
-    background-color: #3498db; /* 파란색 버튼 */
     border: none;
+    flex: 1;
 }
 .Write-Diary {
-    background-color: #e74c3c; /* 빨간색 버튼 */
     border: none;
-}
-.Check-List:hover, .Write-Diary:hover {
-    transform: scale(1.05); /* 호버 시 살짝 커짐 */
+    flex: 2;
 }

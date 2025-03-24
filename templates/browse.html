@@ -8,7 +8,7 @@
     <link href="{{url_for('static', filename = 'vendor/bootstrap-icons/bootstrap-icons.css')}}" rel="stylesheet">
     <title>Document</title>
 </head>
-<body>
+<body style="font-family: 'Malgun Gothic', Arial, sans-serif;">
     <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
         <div class="container-fluid">
             <div class="d-flex align-items-center">
@@ -27,11 +27,11 @@
         <div class="card m-2" data-bs-toggle="modal" data-bs-target="#cardModal">
             <div class="card-header">{{log[6][:10]}} {{log[6][11:16]}}</div>
             <div class="card-body">
-                <!-- <h6 class="card-title"></h6> -->
+                
                 <h6 class="card-text mx-auto">{{log[0]}}</h6>
-                <!-- <h6 class="card-text">{{log[3]}} {{log[4]}} {{log[5]}}</h6> -->
+                
             </div>
-            <!-- <div class="card-footer">{{log[3]}} {{log[4]}} {{log[5]}}</div> -->
+            
         </div>
 
         {% endfor %}

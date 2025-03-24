@@ -12,14 +12,16 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/write.css') }}">
 </head>
 <body>
-  <div class="container">
-    <textarea id="diaryContent" placeholder="오늘 하루는 어떠셨나요?"></textarea>
-    <div class="d-flex align-item-center justify-content-end" id="diaryButtonContainer">
-      <button id="green-button" onclick="sendMessage();">확인</button>
-      <div style="width: 10px;"></div>
-      <button id="green-button" onclick="location.href='/'">닫기</button>
+  <div class="container d-flex flex-column">
+    <div style="flex: 9;">
+      <textarea id="diaryContent" placeholder="오늘 하루는 어떠셨나요?"></textarea>
     </div>
-    <div id="diaryList"></div>
+    
+    <div class="d-flex align-item-center justify-content-end" id="diaryButtonContainer">
+      <button class="btn btn-primary btn-detail" onclick="sendMessage();">확인</button>
+      <div style="width: 16px;"></div>
+      <button class="btn btn-secondary btn-detail" onclick="location.href='/'">닫기</button>
+    </div>
   </div>
 
   <!-- 평가/조언/점수 창 (모달 팝업)-->
