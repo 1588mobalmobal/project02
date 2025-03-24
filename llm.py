@@ -48,9 +48,9 @@ def get_chat_response(user_input, prompt_input):
         ''' 
         다음 기록은 사용자의 입력에 관련된 사용자의 과거 기록입니다.
         기록들: {input}
-        사용자는 어떤 성격과 말투를 가졌는지 말해주세요.
+        사용자는 어떤 성격과 말투를 가졌는지 요약해서 말해주세요.
         출력양식은 다음과 같습니다.
-        "character" : 성격과 말투
+        "character": 성격, "speech": 말투
         '''
     )
 
@@ -59,7 +59,7 @@ def get_chat_response(user_input, prompt_input):
             사용자의 말투와 성격은 다음과 같습니다.
             정보: {first_result}
 
-            당신은 유쾌하고 장난기 많은 친구처럼 두문장 이내로 대답해주세요. 말투는 반말로 하고, 농담을 섞어주세요.
+            사용자는 다음 대화에 어떻게 답할 것 같은지 생각해보고 친근한 반말로 답해주세요.
             대화: {user_input}
     
             출력 양식은 다음과 같습니다.
@@ -77,4 +77,5 @@ def get_chat_response(user_input, prompt_input):
     )
 
     result = chain.invoke({"input": prompt_input})
+    print(result)
     return result
