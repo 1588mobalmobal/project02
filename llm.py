@@ -8,7 +8,7 @@ llm_instance = None
 def init_llm():
     global llm_instance
     if llm_instance is None:
-        llm_instance = OllamaLLM(model="exaone3.5:2.4b", temperature=0.1, num_predict=300, format='json')
+        llm_instance = OllamaLLM(model="exaone3.5:7.8b", temperature=0.1, num_predict=300, format='json')
     return llm_instance
 
 def get_log_response(user_input):
@@ -59,9 +59,10 @@ def get_chat_response(user_input, prompt_input):
             사용자의 말투와 성격은 다음과 같습니다.
             정보: {first_result}
 
-            사용자는 다음 대화에 어떻게 답할 것 같은지 생각해보고 친근한 반말로 답해주세요.
+            사용자는 다음 대화에 어떻게 답할 것 같은지 생각해보고 친근하게 답해주세요.
             대화: {user_input}
-    
+            사용자가 반말을 사용하면 반말로, 존댓말을 사용하면 존댓말로 답해주세요.
+            모든걸 공감할 필요는 없습니다. 아니다 싶은건 아니라고 해주세요. 헛소리하면 충고도 해주고요.
             출력 양식은 다음과 같습니다.
             "reply" : 답변
 
