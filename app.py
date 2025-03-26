@@ -7,9 +7,16 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import sqlite3
 
-import plotly
+
+###########대시보드 생성을 위한 라이브러리 호출
+import dash
+# import dash_core_components as dcc
+# import dash_html_components as html
+from dash import dcc
+from dash import html
+from dash.dependencies import Input, Output
 import plotly.graph_objects as go
-import plotly.utils
+############
 
 import io
 import base64
@@ -117,32 +124,55 @@ def chatting():
     llm_output = llm.get_chat_response(user_input=chat, prompt_input=logs)
     return jsonify(llm_output), 200
 
+###Plotly와 Dash를 이용하여 웹에서 시각화 띄우기
+dash_app = dash.Dash(__name__, server=app, url_base_pathname='/dashboard/')
+
+# 레이아웃 정의
+dash_app.layout = html.Div([
+    html.H1("상태 변화 시각화"),
+    dcc.Graph(id="state-plot"),
+])
+
+# 콜백 함수 정의
+@dash_app.callback(
+    Output("state-plot", "figure"),
+    Input("state-plot", "id")
+)
+### 시각화 해주는 함수
+def update_graph(id):
+    # 데이터베이스 연결
+    conn = sqlite3.connect('database.db')
+    query = "SELECT physical, knowledge, mental, timestamp FROM logs" # 테이블명 변경필요
+    df = pd.read_sql_query(query, conn)
+    conn.close()
+
+    # timestamp를 datetime 형식으로 변환
+    df['timestamp'] = pd.to_datetime(df['timestamp'])
+
+    # 누적 합계 계산
+    df_cumsum = df.set_index('timestamp').cumsum().reset_index()
+
+    # Plotly 누적 선 그래프 생성
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=df_cumsum['timestamp'], y=df_cumsum['physical'], mode='lines+markers', name='Physical'))
+    fig.add_trace(go.Scatter(x=df_cumsum['timestamp'], y=df_cumsum['knowledge'], mode='lines+markers', name='Knowledge'))
+    fig.add_trace(go.Scatter(x=df_cumsum['timestamp'], y=df_cumsum['mental'], mode='lines+markers', name='Mental'))
+
+    fig.update_layout(title='Cumulative Scores by Date', xaxis_title='Date', yaxis_title='Score')
+
+    return fig
+
+# lask 라우팅 추가
 @app.route('/dashboard')
 def dashboard():
     user_id = request.args.get('user_id')
-    data = db.get_weekly_data(user_id)
-    if not data:
-        return "No data available for this user."
+    # user_id를 사용하여 필요한 데이터 필터링 또는 사용자별 데이터 로딩 로직 추가
+    # 예시: user_id에 따라 데이터 필터링
+    # filtered_df = df[df['user_id'] == user_id]
 
-    df = pd.DataFrame(data, columns=['physical', 'knowledge', 'mental', 'date'])
-    df['date'] = pd.to_datetime(df['date'])  # 날짜 형식으로 변환
-    df = df.set_index('date').cumsum().reset_index()
-
-    plt.figure(figsize=(10, 6))
-    sns.lineplot(x='date', y='value', hue='variable', 
-                 data=pd.melt(df, ['date'], var_name='variable', value_name='value'))
-    plt.title('Cumulative Scores by Date')
-    plt.xlabel('Date')
-    plt.ylabel('Score')
-    plt.xticks(rotation=45)  # x축 레이블 회전
-
-    img = io.BytesIO()
-    plt.savefig(img, format='png')
-    img.seek(0)
-    plot_url = base64.b64encode(img.getvalue()).decode('utf8')
-    plt.close()
-
-    return render_template('dashboard.html', plot_url=plot_url)
+    # Dash 앱의 레이아웃을 HTML로 렌더링
+    dash_app_html = dash_app.index()
+    return dash_app_html
 
 @app.route('/delete')
 def delete_log():
