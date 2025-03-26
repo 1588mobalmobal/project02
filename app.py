@@ -16,6 +16,7 @@ from dash import dcc
 from dash import html
 from dash.dependencies import Input, Output
 import plotly.graph_objects as go
+import plotly.express as px
 ############
 
 import io
@@ -130,19 +131,22 @@ dash_app = dash.Dash(__name__, server=app, url_base_pathname='/dashboard/')
 # 레이아웃 정의
 dash_app.layout = html.Div([
     html.H1("상태 변화 시각화"),
-    dcc.Graph(id="state-plot"),
+    dcc.Graph(id="cumulative-plot", style={'width': '100%', 'height': '300px'}),  # 높이 조정
+    dcc.Graph(id="parallel-plot", style={'width': '100%', 'height': '300px'}),  # 높이 조정
+    dcc.Graph(id="scatter-matrix-plot", style={'width': '100%', 'height': '300px'}),  # 높이 조정
 ])
 
 # 콜백 함수 정의
 @dash_app.callback(
-    Output("state-plot", "figure"),
-    Input("state-plot", "id")
+    Output("cumulative-plot", "figure"),
+    Output("parallel-plot", "figure"),
+    Output("scatter-matrix-plot", "figure"),
+    Input("cumulative-plot", "id")
 )
-### 시각화 해주는 함수
 def update_graph(id):
     # 데이터베이스 연결
     conn = sqlite3.connect('database.db')
-    query = "SELECT physical, knowledge, mental, timestamp FROM logs" # 테이블명 변경필요
+    query = "SELECT physical, knowledge, mental, timestamp FROM logs"
     df = pd.read_sql_query(query, conn)
     conn.close()
 
@@ -153,14 +157,29 @@ def update_graph(id):
     df_cumsum = df.set_index('timestamp').cumsum().reset_index()
 
     # Plotly 누적 선 그래프 생성
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=df_cumsum['timestamp'], y=df_cumsum['physical'], mode='lines+markers', name='Physical'))
-    fig.add_trace(go.Scatter(x=df_cumsum['timestamp'], y=df_cumsum['knowledge'], mode='lines+markers', name='Knowledge'))
-    fig.add_trace(go.Scatter(x=df_cumsum['timestamp'], y=df_cumsum['mental'], mode='lines+markers', name='Mental'))
+    fig_cumulative = go.Figure()
+    fig_cumulative.add_trace(go.Scatter(x=df_cumsum['timestamp'], y=df_cumsum['physical'], mode='lines+markers', name='Physical'))
+    fig_cumulative.add_trace(go.Scatter(x=df_cumsum['timestamp'], y=df_cumsum['knowledge'], mode='lines+markers', name='Knowledge'))
+    fig_cumulative.add_trace(go.Scatter(x=df_cumsum['timestamp'], y=df_cumsum['mental'], mode='lines+markers', name='Mental'))
 
-    fig.update_layout(title='Cumulative Scores by Date', xaxis_title='Date', yaxis_title='Score')
+    fig_cumulative.update_layout(title='Cumulative Scores by Date', xaxis_title='Date', yaxis_title='Score')
 
-    return fig
+    # timestamp를 숫자로 변환 (Unix timestamp)
+    df['timestamp_numeric'] = df['timestamp'].astype('int64') // 10**9
+
+    # Plotly 평행 좌표 플롯 생성
+    fig_parallel = px.parallel_coordinates(df,
+                                           color='timestamp_numeric',
+                                           dimensions=['physical', 'knowledge', 'mental'],
+                                           color_continuous_scale=px.colors.sequential.Viridis)
+
+    # Plotly 산점도 행렬 생성
+    fig_scatter_matrix = px.scatter_matrix(df,
+                                            dimensions=['physical', 'knowledge', 'mental'],
+                                            color='timestamp_numeric',
+                                            color_continuous_scale=px.colors.sequential.Viridis)
+
+    return fig_cumulative, fig_parallel, fig_scatter_matrix
 
 # lask 라우팅 추가
 @app.route('/dashboard')
