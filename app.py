@@ -7,6 +7,10 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import sqlite3
 
+import plotly
+import plotly.graph_objects as go
+import plotly.utils
+
 import io
 import base64
 
@@ -139,7 +143,6 @@ def dashboard():
     plt.close()
 
     return render_template('dashboard.html', plot_url=plot_url)
-
 
 @app.route('/delete')
 def delete_log():

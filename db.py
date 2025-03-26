@@ -117,8 +117,8 @@ def get_log_by_vector(indices):
     conn.close()
     return result
 
+## 데이터베
 def get_weekly_data(user_id):
-    """주 단위 데이터 가져오기"""
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
     c.execute('''
