@@ -24,7 +24,8 @@ def init_db():
               (user_id INTEGER PRIMARY KEY NOT NULL,
               t_physical INTEGER DEFAULT 0,
               t_knowledge INTEGER DEFAULT 0,
-              t_mental INTEGER DEFAULT 0
+              t_mental INTEGER DEFAULT 0,
+              log_count INTEGER DEFAULT 0
               );
     ''')
     conn.commit()
@@ -47,13 +48,14 @@ def save_logs(user_input, encouragement, advice, physical, knowledge, mental, v_
               )
     conn.commit()
     c.execute('''
-            INSERT INTO users (user_id, t_physical, t_knowledge, t_mental) VALUES (?, ?, ?, ?)
+            INSERT INTO users (user_id, t_physical, t_knowledge, t_mental, log_count) VALUES (?, ?, ?, ?, ?)
             ON CONFLICT(user_id) DO UPDATE SET
             t_physical = t_physical + ?,
             t_knowledge = t_knowledge + ?,
-            t_mental = t_mental + ?
+            t_mental = t_mental + ?,
+            log_count = log_count + ?
             ''',
-            (1, physical, knowledge, mental, physical, knowledge, mental)
+            (1, physical, knowledge, mental, 1, physical, knowledge, mental, 1)
             )
     conn.commit()
     conn.close()
@@ -62,7 +64,7 @@ def get_logs(user_id):
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
     c.execute('''
-        SELECT user_input, encouragement, advice, physical, knowledge, mental, timestamp
+        SELECT id, user_input, encouragement, advice, physical, knowledge, mental, timestamp
         FROM logs
         WHERE user_id = ?;
     ''', (int(user_id),))
@@ -117,12 +119,28 @@ def get_log_by_vector(indices):
     conn.close()
     return result
 
+def get_log_count(user_id):
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+    try :
+        c.execute('''
+            SELECT log_count FROM users WHERE user_id = ?;
+        ''', (int(user_id),))
+        log_count = c.fetchone()
+        conn.close()
+        return log_count
+    except Exception as e :
+        print(f"Error in delete_log: {e}")
+        conn.close()
+        return 0
+    
+
 def delete_log(user_id, log_id):
     try:
         conn = sqlite3.connect('database.db')
         c = conn.cursor()
         c.execute('''
-            SELECT physical, knowledge, mental FROM logs
+            SELECT physical, knowledge, mental, v_index FROM logs
             WHERE user_id = ? and id = ?;
         ''', (int(user_id), int(log_id)))
         scores = c.fetchone()
@@ -133,6 +151,7 @@ def delete_log(user_id, log_id):
         physical = scores[0]
         knowledge = scores[1]
         mental = scores[2]
+        v_index = scores[3]
 
         c.execute('''
             DELETE FROM logs
@@ -149,6 +168,7 @@ def delete_log(user_id, log_id):
         ''', (physical, knowledge, mental, int(user_id)))
         conn.commit()
         conn.close()
+        return v_index
     except Exception as e:
         print(f"Error in delete_log: {e}")
         conn.close()
