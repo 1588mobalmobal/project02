@@ -1,7 +1,11 @@
-from flask import Flask, request, jsonify, render_template, make_response
+from flask import Flask, request, jsonify, render_template, make_response, redirect, url_for
 import json
 import db
 import llm
+import chroma
+from dotenv import load_dotenv
+
+load_dotenv()
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -9,13 +13,7 @@ import sqlite3
 
 
 ###########대시보드 생성을 위한 라이브러리 호출
-# import datetime
 import dash
-# from dash import dcc
-# from dash import html
-# from dash.dependencies import Input, Output
-# import plotly.graph_objects as go
-# import plotly.express as px
 import visualization
 ############
 
@@ -55,8 +53,13 @@ def home():
     return response
 
 @app.route('/write', methods=['GET'])
-def log():
+def write():
     return render_template('write.html')
+
+@app.route('/result', methods=['GET'])
+def result():
+
+    return render_template('result.html')
 
 @app.route('/browse', methods=['GET'])
 def browse():
@@ -74,8 +77,16 @@ def handle_llm_request():
         return jsonify({"error": "No input provided"}), 400
     
     user_input = data['input']
-    embedding = embed.get_embedding(user_input)
-    v_index = embed.store_vector(embedding)
+
+    log_count = db.get_log_count(user_id)
+    if log_count != None:
+        log_count = log_count[0]
+    else:
+        log_count = 0
+    
+    embedding = chroma.get_embedding(user_input)
+    chroma.store_vector(user_input, embedding, log_count)
+
     llm_output = llm.get_log_response(user_input)
 
     encouragement = json.loads(llm_output)['격려']
@@ -90,7 +101,7 @@ def handle_llm_request():
     knowledge = int(knowledge)
     mental = int(mental)
 
-    db.save_logs(user_input, encouragement, advice, physical, knowledge, mental, v_index)
+    db.save_logs(user_input, encouragement, advice, physical, knowledge, mental, str(log_count))
     
     response = {
         "encouragement": encouragement,
@@ -100,7 +111,7 @@ def handle_llm_request():
         "mental": mental,
         "timestamp": db.datetime.now().isoformat()
     }
-    return jsonify(response), 200
+    return jsonify({"response" : response, "redirect" : "/result"}), 200
 
 @app.route('/chat', methods=['GET'])
 def chat():
@@ -113,9 +124,10 @@ def chatting():
         return jsonify({"error": "No chat provided"}), 400
     
     chat = data['chat']
-    embedding = embed.get_embedding(chat)
-    _, indices = embed.search_vector_store(embedding)
-    logs = db.get_log_by_vector(indices)
+    embedding = chroma.get_embedding(chat)
+    result = chroma.search_vector_store(embedding)
+    logs = db.get_log_by_vector(result['ids'])
+    print(logs)
     llm_output = llm.get_chat_response(user_input=chat, prompt_input=logs)
     return jsonify(llm_output), 200
 
@@ -130,12 +142,17 @@ def dashboard():
     dash_app_html = dash_app.index()
     return dash_app_html
 
-@app.route('/delete')
+@app.route('/delete', methods = ['POST'])
 def delete_log():
-    user_id = int(request.args.get('user_id', 1))
-    log_id = int(request.args.get('log_id', 0))
-    db.delete_log(user_id=user_id, log_id=log_id)
-    return 'delete'
+    data = request.get_json()
+    if not data :
+        return jsonify({"error": "No data provided"}), 400
+    print(data)
+    user_id = 1
+    log_id = data['id']
+    vector_id = db.delete_log(user_id, log_id)
+    chroma.delete_vector(vector_id)
+    return jsonify("delete success"), 200
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5252, debug=True)

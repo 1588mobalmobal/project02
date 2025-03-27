@@ -8,7 +8,7 @@
     <link href="{{url_for('static', filename = 'vendor/bootstrap-icons/bootstrap-icons.css')}}" rel="stylesheet">
     <title>Document</title>
 </head>
-<body>
+<body style="font-family: 'Malgun Gothic', Arial, sans-serif;">
     <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
         <div class="container-fluid">
             <div class="d-flex align-items-center">
@@ -24,14 +24,20 @@
 
         {% for log in logs %}
 
-        <div class="card m-2" data-bs-toggle="modal" data-bs-target="#cardModal">
-            <div class="card-header">{{log[6][:10]}} {{log[6][11:16]}}</div>
-            <div class="card-body">
-                <!-- <h6 class="card-title"></h6> -->
-                <h6 class="card-text mx-auto">{{log[0]}}</h6>
-                <!-- <h6 class="card-text">{{log[3]}} {{log[4]}} {{log[5]}}</h6> -->
+        <div class="card m-2" id="log-card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between">
+                    <div class="">{{log[7][:10]}} {{log[7][11:16]}}</div>
+                    <button class="btn btn-close btn-group-sm" data-bs-toggle="modal" data-bs-target="#cardModal" data-id="{{log[0]}}" onclick=take_over_id(this)></button>
+                </div>
+                
             </div>
-            <!-- <div class="card-footer">{{log[3]}} {{log[4]}} {{log[5]}}</div> -->
+            <div class="card-body">
+                
+                <h6 class="card-text mx-auto">{{log[1]}}</h6>
+                
+            </div>
+            
         </div>
 
         {% endfor %}
@@ -39,30 +45,30 @@
     </div>
 
 
-
-
-
     <!-- 모달 모듈 구현부 -->
     <div class="modal fade" id="cardModal">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="cardModalLabel">세부 기록</h5>
+                    <h5 class="modal-title" id="cardModalLabel">일기를 삭제하시겠습니까?</h5>
                     <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <!-- 일기내용 -->
+                    <p>삭제된 일기와 점수는 복구할 수 없습니다.</p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
-                    <button type="button" class="btn btn-primary">저장</button>
+                    <button type="button" class="btn btn-danger" id="delete-btn" onclick=delete_log(this)>삭제</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
                 </div>
             </div>
         </div>
     </div>
+    
+
 
      
 
     <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{url_for('static', filename = 'js/browse.js')}}"></script>
 </body>
 </html>

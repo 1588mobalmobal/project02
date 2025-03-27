@@ -4,38 +4,37 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Document</title>
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <script src="{{ url_for('static', filename='js/write_modal.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/write.js') }}"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/write.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/write_modal.css') }}">
 </head>
-<body>
-  <div class="container">
-    <h1>Diary</h1> <!--제목 지을 수 있게?-->
-    <input type="date" id="diaryDate">
-    <textarea id="diaryContent" placeholder="오늘 하루는 어떠셨나요?"></textarea>
-    <button id="homeButton" onClick="location.href='/'">홈</button>
-    <button id="saveButton" onclick="modal('dialog')">저장</button>
-    <div id="diaryList"></div>
-  </div>
-  
-  <!-- 평가/조언/점수 창 (모달 팝업)-->
-  <div id="dialog" class="dialog">
-    <div class="tb">
-      <div class="inner" style="max-width:800px;">
-        <div class="top">
-          <div class="title">Summary</div>
-          <a href="#" class="modal-close">닫기</a>
-        </div>
-        <div class="ct">
-          <P>요약(평가) 및 조언</P>
-        </div>
-        <div class="ct">
-          <p>상태창</p>
-        </div>
-      </div>
+<body style="font-family: 'Malgun Gothic', Arial, sans-serif;">
+  <div class="container d-flex flex-column">
+    <div style="flex: 9;">
+      <textarea id="diaryContent" placeholder="오늘 하루는 어떠셨나요?"></textarea>
     </div>
     
+    <div class="d-flex align-item-center justify-content-end" id="diaryButtonContainer">
+      <button class="btn btn-primary btn-detail" data-bs-toggle="modal" data-bs-target="#loadingModal" onclick="sendMessage();">확인</button>
+      <div style="width: 16px;"></div>
+      <button class="btn btn-secondary btn-detail" onclick="location.href='/'">닫기</button>
+    </div>
   </div>
+
+<!-- 모달 -->
+<div class="modal fade" id="loadingModal" tabindex="-1" aria-labelledby="loadingModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-body text-center">
+        <div class="spinner-border" role="status">
+          <span class="visually-hidden">로딩 중...</span>
+        </div>
+        <p class="mt-2">잠시만 기다려주세요.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 </body>
 </html>
