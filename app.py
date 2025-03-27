@@ -131,16 +131,14 @@ dash_app = dash.Dash(__name__, server=app, url_base_pathname='/dashboard/')
 # 레이아웃 정의
 dash_app.layout = html.Div([
     html.H1("상태 변화 시각화"),
-    dcc.Graph(id="cumulative-plot", style={'width': '100%', 'height': '300px'}),  # 높이 조정
-    dcc.Graph(id="parallel-plot", style={'width': '100%', 'height': '300px'}),  # 높이 조정
-    dcc.Graph(id="scatter-matrix-plot", style={'width': '100%', 'height': '300px'}),  # 높이 조정
+    dcc.Graph(id="cumulative-plot", style={'width': '100%', 'height': '400px'}),  # 누적 선 그래프
+    dcc.Graph(id="donut-chart", style={'width': '50%', 'height': '400px'})  # 도넛 차트 추가
 ])
 
 # 콜백 함수 정의
 @dash_app.callback(
     Output("cumulative-plot", "figure"),
-    Output("parallel-plot", "figure"),
-    Output("scatter-matrix-plot", "figure"),
+    Output("donut-chart", "figure"),  # 도넛 차트 출력 추가
     Input("cumulative-plot", "id")
 )
 def update_graph(id):
@@ -164,22 +162,18 @@ def update_graph(id):
 
     fig_cumulative.update_layout(title='Cumulative Scores by Date', xaxis_title='Date', yaxis_title='Score')
 
-    # timestamp를 숫자로 변환 (Unix timestamp)
-    df['timestamp_numeric'] = df['timestamp'].astype('int64') // 10**9
+    # 도넛 차트 생성
+    total_physical = df['physical'].sum()
+    total_knowledge = df['knowledge'].sum()
+    total_mental = df['mental'].sum()
 
-    # Plotly 평행 좌표 플롯 생성
-    fig_parallel = px.parallel_coordinates(df,
-                                           color='timestamp_numeric',
-                                           dimensions=['physical', 'knowledge', 'mental'],
-                                           color_continuous_scale=px.colors.sequential.Viridis)
+    fig_donut = go.Figure(data=[go.Pie(labels=['Physical', 'Knowledge', 'Mental'],
+                                     values=[total_physical, total_knowledge, total_mental],
+                                     hole=.3)])  # 도넛 모양
 
-    # Plotly 산점도 행렬 생성
-    fig_scatter_matrix = px.scatter_matrix(df,
-                                            dimensions=['physical', 'knowledge', 'mental'],
-                                            color='timestamp_numeric',
-                                            color_continuous_scale=px.colors.sequential.Viridis)
+    fig_donut.update_layout(title='누적 점수 비율')
 
-    return fig_cumulative, fig_parallel, fig_scatter_matrix
+    return fig_cumulative, fig_donut
 
 # lask 라우팅 추가
 @app.route('/dashboard')
