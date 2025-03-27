@@ -131,17 +131,24 @@ dash_app = dash.Dash(__name__, server=app, url_base_pathname='/dashboard/')
 # 레이아웃 정의
 dash_app.layout = html.Div([
     html.H1("상태 변화 시각화"),
+    dcc.Dropdown(id='date-dropdown', style={'width': '50%'}),  # 날짜 드롭다운 메뉴 추가
     dcc.Graph(id="cumulative-plot", style={'width': '100%', 'height': '400px'}),  # 누적 선 그래프
-    dcc.Graph(id="donut-chart", style={'width': '50%', 'height': '400px'})  # 도넛 차트 추가
+    html.Div([  # 도넛 차트와 스타 차트를 감싸는 div 추가
+        dcc.Graph(id="donut-chart", style={'width': '50%', 'display': 'inline-block'}),  # 도넛 차트
+        dcc.Graph(id="radar-chart", style={'width': '50%', 'display': 'inline-block'})  # 스타 차트
+    ])
 ])
 
 # 콜백 함수 정의
 @dash_app.callback(
     Output("cumulative-plot", "figure"),
-    Output("donut-chart", "figure"),  # 도넛 차트 출력 추가
-    Input("cumulative-plot", "id")
+    Output("donut-chart", "figure"),
+    Output("radar-chart", "figure"),
+    Output("date-dropdown", "options"),  # 날짜 드롭다운 옵션 추가
+    Input("cumulative-plot", "id"),
+    Input("date-dropdown", "value")  # 선택된 날짜 입력 추가
 )
-def update_graph(id):
+def update_graph(id, selected_date):
     # 데이터베이스 연결
     conn = sqlite3.connect('database.db')
     query = "SELECT physical, knowledge, mental, timestamp FROM logs"
@@ -151,8 +158,17 @@ def update_graph(id):
     # timestamp를 datetime 형식으로 변환
     df['timestamp'] = pd.to_datetime(df['timestamp'])
 
-    # 누적 합계 계산
-    df_cumsum = df.set_index('timestamp').cumsum().reset_index()
+    # 날짜 드롭다운 옵션 생성
+    date_options = [{'label': date.strftime('%Y-%m-%d'), 'value': date} for date in df['timestamp'].dt.date.unique()]
+
+    # 선택된 날짜까지의 데이터 필터링
+    if selected_date:
+        filtered_df = df[df['timestamp'].dt.date <= pd.to_datetime(selected_date).date()]
+    else:
+        filtered_df = df  # 모든 데이터 사용
+
+    # 누적 합계 계산 (선택된 날짜까지 또는 전체 데이터)
+    df_cumsum = filtered_df.set_index('timestamp').cumsum().reset_index()
 
     # Plotly 누적 선 그래프 생성
     fig_cumulative = go.Figure()
@@ -162,10 +178,10 @@ def update_graph(id):
 
     fig_cumulative.update_layout(title='Cumulative Scores by Date', xaxis_title='Date', yaxis_title='Score')
 
-    # 도넛 차트 생성
-    total_physical = df['physical'].sum()
-    total_knowledge = df['knowledge'].sum()
-    total_mental = df['mental'].sum()
+    # 누적 도넛 차트 생성 (선택된 날짜까지 또는 전체 데이터)
+    total_physical = filtered_df['physical'].sum()
+    total_knowledge = filtered_df['knowledge'].sum()
+    total_mental = filtered_df['mental'].sum()
 
     fig_donut = go.Figure(data=[go.Pie(labels=['Physical', 'Knowledge', 'Mental'],
                                      values=[total_physical, total_knowledge, total_mental],
@@ -173,7 +189,21 @@ def update_graph(id):
 
     fig_donut.update_layout(title='누적 점수 비율')
 
-    return fig_cumulative, fig_donut
+    # 누적 스타 차트 생성 (선택된 날짜까지 또는 전체 데이터)
+    fig_radar = go.Figure(data=go.Scatterpolar(
+        r=[total_physical, total_knowledge, total_mental],
+        theta=['Physical', 'Knowledge', 'Mental'],
+        fill='toself'
+    ))
+
+    fig_radar.update_layout(
+        polar=dict(radialaxis=dict(visible=True)),
+        showlegend=False,
+        title='누적 점수 스타 차트'
+    )
+
+    return fig_cumulative, fig_donut, fig_radar, date_options
+
 
 # lask 라우팅 추가
 @app.route('/dashboard')
