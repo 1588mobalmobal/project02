@@ -9,6 +9,7 @@ import sqlite3
 
 
 ###########대시보드 생성을 위한 라이브러리 호출
+import datetime
 import dash
 # import dash_core_components as dcc
 # import dash_html_components as html
@@ -131,7 +132,12 @@ dash_app = dash.Dash(__name__, server=app, url_base_pathname='/dashboard/')
 # 레이아웃 정의
 dash_app.layout = html.Div([
     html.H1("상태 변화 시각화"),
-    dcc.Dropdown(id='date-dropdown', style={'width': '50%'}),  # 날짜 드롭다운 메뉴 추가
+    dcc.DatePickerSingle(
+        id='date-picker',
+        date=datetime.date.today(),
+        display_format='YYYY-MM-DD'  # 날짜 표시 형식 변경
+    ),
+    html.Div(id='date-range-display'),  # 선택된 날짜 범위 표시
     dcc.Graph(id="cumulative-plot", style={'width': '100%', 'height': '400px'}),  # 누적 선 그래프
     html.Div([  # 도넛 차트와 스타 차트를 감싸는 div 추가
         dcc.Graph(id="donut-chart", style={'width': '50%', 'display': 'inline-block'}),  # 도넛 차트
@@ -144,11 +150,10 @@ dash_app.layout = html.Div([
     Output("cumulative-plot", "figure"),
     Output("donut-chart", "figure"),
     Output("radar-chart", "figure"),
-    Output("date-dropdown", "options"),  # 날짜 드롭다운 옵션 추가
-    Input("cumulative-plot", "id"),
-    Input("date-dropdown", "value")  # 선택된 날짜 입력 추가
+    Output("date-range-display", "children"),  # 날짜 범위 표시 출력 추가
+    Input("date-picker", "date")  # 선택된 날짜 입력 추가
 )
-def update_graph(id, selected_date):
+def update_graph(selected_date):
     # 데이터베이스 연결
     conn = sqlite3.connect('database.db')
     query = "SELECT physical, knowledge, mental, timestamp FROM logs"
@@ -158,14 +163,15 @@ def update_graph(id, selected_date):
     # timestamp를 datetime 형식으로 변환
     df['timestamp'] = pd.to_datetime(df['timestamp'])
 
-    # 날짜 드롭다운 옵션 생성
-    date_options = [{'label': date.strftime('%Y-%m-%d'), 'value': date} for date in df['timestamp'].dt.date.unique()]
-
-    # 선택된 날짜까지의 데이터 필터링
+    # 선택된 날짜를 기준으로 1주일 전까지의 데이터 필터링
     if selected_date:
-        filtered_df = df[df['timestamp'].dt.date <= pd.to_datetime(selected_date).date()]
+        end_date = pd.to_datetime(selected_date).date()
+        start_date = end_date - datetime.timedelta(days=6)
+        filtered_df = df[(df['timestamp'].dt.date >= start_date) & (df['timestamp'].dt.date <= end_date)]
+        date_range = f"{start_date} ~ {end_date}"  # 날짜 범위 표시
     else:
         filtered_df = df  # 모든 데이터 사용
+        date_range = "전체 기간"
 
     # 누적 합계 계산 (선택된 날짜까지 또는 전체 데이터)
     df_cumsum = filtered_df.set_index('timestamp').cumsum().reset_index()
@@ -202,7 +208,7 @@ def update_graph(id, selected_date):
         title='누적 점수 스타 차트'
     )
 
-    return fig_cumulative, fig_donut, fig_radar, date_options
+    return fig_cumulative, fig_donut, fig_radar, date_range
 
 
 # lask 라우팅 추가
