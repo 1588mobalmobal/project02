@@ -1,20 +1,22 @@
-from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate, PromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
 from langchain_ollama.llms import OllamaLLM
 from langchain_core.runnables import RunnableSequence, RunnableLambda
 import json
+import db
+from dateutil import parser
+from datetime import datetime
 
 llm_instance = None
 
 def init_llm():
     global llm_instance
     if llm_instance is None:
-        llm_instance = OllamaLLM(model="exaone3.5:7.8b", temperature=0.1, num_predict=256, format='json')
+        llm_instance = OllamaLLM(model="exaone3.5:2.4b", temperature=0.1, num_predict=150, format='json')  # num_predict 증가
     return llm_instance
 
 def get_log_response(user_input):
-    # 로컬 Ollama 모델 설정 (예: 'llama3' 모델 사용)
     model = init_llm()
-    system_message_prompt = SystemMessagePromptTemplate.from_template(
+    system_message_prompt = PromptTemplate.from_template(
         '''
     당신은 사용자의 일기를 받아 조언을 해주는 동반자입니다.
     친근한 경어로 한 문장으로 일기 내용을 평가한 후, 한 문장으로 조언을 해주세요.
@@ -26,56 +28,81 @@ def get_log_response(user_input):
     ["격려" : 격려 내용, "조언" : 조언 내용, "체력" : 체력 점수, "지식" : 지식 점수, "정신력" : 정신력 점수]
     '''
     )
-    human_message_prompt = HumanMessagePromptTemplate.from_template('{text}')
-
     chat_prompt = ChatPromptTemplate.from_messages(
-    [system_message_prompt, human_message_prompt]
+        [system_message_prompt, "{text}"]
     )
-
     chain = chat_prompt | model
-
     response = chain.invoke(user_input)
-
     return response
 
-def get_chat_response(user_input, prompt_input):
+def parse_date_from_input(user_input):
+    try:
+        parsed_date = parser.parse(user_input, dayfirst=False, fuzzy=True)
+        return parsed_date.strftime('%Y-%m-%d')
+    except ValueError:
+        return None
 
-    # 로컬 Ollama 모델 설정 
+def get_chat_response(user_input, prompt_input, prev_input=None):
     model = init_llm()
 
-    first_prompt = PromptTemplate.from_template(
-        ''' 
-        다음 기록은 사용자의 입력에 관련된 사용자의 과거 기록입니다.
-        기록들: {input}
-        사용자는 어떤 성격과 말투를 가졌는지 요약해서 말해주세요.
-        출력양식은 다음과 같습니다.
-        "character": 성격, "speech": 말투
+    prompt = PromptTemplate.from_template(
         '''
-    )
+        당신은 사용자의 말투와 성격을 학습해서 대답하는 친근한 동반자야.
+        과거 기록: {past_logs}
+        직전 질문: {prev_input}
+        현재 질문: {user_input}
 
-    second_prompt = PromptTemplate.from_template(
-        '''
-            사용자의 말투와 성격은 다음과 같습니다.
-            정보: {first_result}
+        다음 지침을 따라 간결하게 답해:
+        1. "안녕" 같은 단순 인사면 직전 질문을 무시하고 "안녕!"처럼 간단히 답해.
+        2. 사용자가 "내가 방금 뭐 물어봤지?"처럼 직전 질문에 대해 묻거나 맥락을 이어가려 하면, {prev_input}을 보고 자연스럽게 대답해.
+        3. "오늘 일기"를 물으면 db.get_today_log(1)을 참고해서 답해.
+        4. 날짜(예: "3월 25일", "지난주")나 키워드(예: "운동")로 과거 일기를 물으면:
+           - 날짜가 있으면 "date": "YYYY-MM-DD" 형식으로 추출.
+           - 키워드가 있으면 "keyword": 키워드로 추출.
+           - 둘 다 없으면 "date": "없음", "keyword": "없음".
+        5. 사용자의 말투(반말/존댓말)를 따라 하고, 한두 문장으로 끝낼 것.
+        6. 완전한 JSON 형식을 유지하고, 문자열이 중간에 끊기지 않게 해.
 
-            사용자는 다음 대화에 어떻게 답할 것 같은지 생각해보고 친근하게 답해주세요.
-            대화: {user_input}
-            사용자가 반말을 사용하면 반말로, 존댓말을 사용하면 존댓말로 답해주세요.
-            모든걸 공감할 필요는 없습니다. 아니다 싶은건 아니라고 해주세요. 헛소리하면 충고도 해주고요.
-            출력 양식은 다음과 같습니다.
-            "reply" : 답변
-
+        출력 양식: 
+        "reply": 답변,
+        "date": 추출된 날짜 (없으면 "없음"),
+        "keyword": 추출된 키워드 (없으면 "없음")
         '''
     )
 
     chain = RunnableSequence(
-        first_prompt,
-        model,
-        RunnableLambda(lambda x: {"first_result": x, "user_input" : user_input}),
-        second_prompt,
+        RunnableLambda(lambda x: {
+            "past_logs": prompt_input if prompt_input else "과거 기록 없음",
+            "prev_input": prev_input if prev_input else "없음",
+            "user_input": x
+        }),
+        prompt,
         model
     )
 
-    result = chain.invoke({"input": prompt_input})
-    print(result)
-    return result
+    # LLM 호출 및 예외 처리
+    try:
+        result = chain.invoke(user_input)
+        response = json.loads(result)
+    except json.JSONDecodeError:
+        # JSON 파싱 실패 시 기본 응답
+        return json.dumps({"reply": "뭔가 잘못됐네, 다시 물어봐!", "date": "없음", "keyword": "없음"})
+
+    reply = response["reply"]
+    date = response.get("date", "없음")
+    keyword = response.get("keyword", "없음")
+
+    # 일기 검색 로직
+    if "오늘 일기" in user_input:
+        today_log = db.get_today_log(1)
+        reply = f"오늘 너는 '{today_log}'라고 썼어." if today_log else "오늘 일기 없네."
+    elif date != "없음":
+        parsed_date = parse_date_from_input(user_input) if date == "없음" else date
+        if parsed_date:
+            past_log = db.get_past_log_by_date(1, parsed_date)
+            reply = f"그날 너는 '{past_log['content']}' 썼었어." if past_log else "그때 일기 못 찾겠네."
+    elif keyword != "없음":
+        past_log = db.get_past_log_by_keyword(1, keyword)
+        reply = f"그때 너는 '{past_log['content']}' 썼었어." if past_log else "그때 일기 못 찾겠네."
+
+    return json.dumps({"reply": reply, "date": date, "keyword": keyword})

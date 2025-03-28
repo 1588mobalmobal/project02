@@ -172,3 +172,43 @@ def delete_log(user_id, log_id):
     except Exception as e:
         print(f"Error in delete_log: {e}")
         conn.close()
+
+
+# 일기 기록 검색 함수(1대1대화에서 쓰기위한)
+def get_today_log(user_id):
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+    today = datetime.now().strftime('%Y-%m-%d')
+    c.execute('''
+        SELECT user_input FROM logs 
+        WHERE user_id = ? AND timestamp LIKE ? 
+        ORDER BY timestamp DESC LIMIT 1
+    ''', (int(user_id), f"{today}%"))
+    result = c.fetchone()
+    conn.close()
+    return result[0] if result else None
+
+def get_past_log_by_date(user_id, date_str):
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+    # date_str은 "2025-03-25" 같은 형식 또는 "2025-03"처럼 월 단위도 가능
+    c.execute('''
+        SELECT user_input, timestamp FROM logs 
+        WHERE user_id = ? AND timestamp LIKE ? 
+        ORDER BY timestamp DESC LIMIT 1
+    ''', (int(user_id), f"{date_str}%"))
+    result = c.fetchone()
+    conn.close()
+    return {"content": result[0], "timestamp": result[1]} if result else None
+
+def get_past_log_by_keyword(user_id, keyword):
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+    c.execute('''
+        SELECT user_input, timestamp FROM logs 
+        WHERE user_id = ? AND user_input LIKE ? 
+        ORDER BY timestamp DESC LIMIT 1
+    ''', (int(user_id), f"%{keyword}%"))
+    result = c.fetchone()
+    conn.close()
+    return {"content": result[0], "timestamp": result[1]} if result else None

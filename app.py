@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, make_response, redirect, url_for
+from flask import Flask, request, jsonify, render_template, make_response, redirect, url_for, session
 import json
 import db
 import llm
@@ -8,8 +8,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
+app.secret_key = 'your_secret_key_here'  # 세션 암호화를 위한 키
 
-user_id = 1
+user_id = 1  # 나중에 로그인 기능 추가 시 동적으로 변경 필요
 
 db.init_db()
 
@@ -42,13 +43,13 @@ def home():
     response.headers['Expires'] = '-1'
     return response
 
+# 나머지 라우트는 이전과 동일
 @app.route('/write', methods=['GET'])
 def write():
     return render_template('write.html')
 
 @app.route('/result', methods=['GET'])
 def result():
-
     return render_template('result.html')
 
 @app.route('/browse', methods=['GET'])
@@ -67,16 +68,14 @@ def handle_llm_request():
         return jsonify({"error": "No input provided"}), 400
     
     user_input = data['input']
-
     log_count = db.get_log_count(user_id)
-    if log_count != None:
+    if log_count is not None:
         log_count = log_count[0]
     else:
         log_count = 0
     
     embedding = chroma.get_embedding(user_input)
     chroma.store_vector(user_input, embedding, log_count)
-
     llm_output = llm.get_log_response(user_input)
 
     encouragement = json.loads(llm_output)['격려']
@@ -84,8 +83,6 @@ def handle_llm_request():
     physical = json.loads(llm_output)['체력']
     knowledge = json.loads(llm_output)['지식']
     mental = json.loads(llm_output)['정신력']
-
-    print(f"LLM Output: physical={physical}, knowledge={knowledge}, mental={mental}, types: {type(physical)}, {type(knowledge)}, {type(mental)}")
 
     physical = int(physical)
     knowledge = int(knowledge)
@@ -101,7 +98,7 @@ def handle_llm_request():
         "mental": mental,
         "timestamp": db.datetime.now().isoformat()
     }
-    return jsonify({"response" : response, "redirect" : "/result"}), 200
+    return jsonify({"response": response, "redirect": "/result"}), 200
 
 @app.route('/chat', methods=['GET'])
 def chat():
@@ -114,17 +111,19 @@ def chatting():
         return jsonify({"error": "No chat provided"}), 400
     
     chat = data['chat']
+    prev_chat = session.get('prev_chat', None)
+    session['prev_chat'] = chat
+
     embedding = chroma.get_embedding(chat)
     result = chroma.search_vector_store(embedding)
     logs = db.get_log_by_vector(result['ids'])
-    print(logs)
-    llm_output = llm.get_chat_response(user_input=chat, prompt_input=logs)
+    llm_output = llm.get_chat_response(user_input=chat, prompt_input=logs, prev_input=prev_chat)
     return jsonify(llm_output), 200
 
-@app.route('/delete', methods = ['POST'])
+@app.route('/delete', methods=['POST'])
 def delete_log():
     data = request.get_json()
-    if not data :
+    if not data:
         return jsonify({"error": "No data provided"}), 400
     print(data)
     user_id = 1
