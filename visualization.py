@@ -12,9 +12,6 @@ def create_dash_app(app):
 
     dash_app = dash.Dash(__name__, server=app, url_base_pathname='/dashboard/')
 
-    # 색상 팔레트 정의 (이미지에서 추출한 색상)
-    colors = ['#98ddde', '#d99694', '#b3de69']
-
     # 레이아웃 정의
     dash_app.layout = html.Div([
         html.H1("상태 변화 시각화"),
@@ -29,7 +26,7 @@ def create_dash_app(app):
             dcc.Graph(id="donut-chart", style={'width': '100%', 'display': 'inline-block'}),  # 도넛 차트
             dcc.Graph(id="radar-chart", style={'width': '100%', 'display': 'block'})  # 스타 차트를 아래로 내림
         ])
-    ])
+    ], style={'backgroundColor': '#E0F8F7'})  # 대시보드 배경 색상 설정
 
     # 콜백 함수 정의
     @dash_app.callback(
@@ -78,11 +75,10 @@ def create_dash_app(app):
         else:
             fig_bar = go.Figure(data=[go.Bar(x=[], y=[])])
 
-        # 막대 그래프 배경 및 그리드 제거
+        # 막대 그래프 배경 색상 설정
         fig_bar.update_layout(
-            plot_bgcolor='rgba(0,0,0,0)',  # 배경색 투명하게 설정
-            paper_bgcolor='rgba(0,0,0,0)',  # 그래프 주변 배경색 투명하게 설정
-            yaxis=dict(gridcolor='rgba(0,0,0,0)')  # y축 그리드 제거
+            plot_bgcolor='#E0F8F7',
+            paper_bgcolor='#E0F8F7'
         )
 
         # 누적 합계 계산 (선택된 날짜까지 또는 전체 데이터)
@@ -96,11 +92,10 @@ def create_dash_app(app):
 
         fig_cumulative.update_layout(title='Cumulative Scores by Date', xaxis_title='Date', yaxis_title='Score')
 
-        # 누적 선 그래프 배경 및 그리드 제거
+        # 누적 선 그래프 배경 색상 설정
         fig_cumulative.update_layout(
-            plot_bgcolor='rgba(0,0,0,0)',  # 배경색 투명하게 설정
-            paper_bgcolor='rgba(0,0,0,0)',  # 그래프 주변 배경색 투명하게 설정
-            yaxis=dict(gridcolor='rgba(0,0,0,0)')  # y축 그리드 제거
+            plot_bgcolor='#E0F8F7',
+            paper_bgcolor='#E0F8F7'
         )
 
         # 누적 도넛 차트 생성 (선택된 날짜까지 또는 전체 데이터)
