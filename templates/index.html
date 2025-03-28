@@ -27,13 +27,17 @@
 
         <!-- 상태창 -->
         <div class="Status-Memu-Container">
-            <div class="Status-Memu">
+            <div class="Status-Memu" id="status-menu">
                 <span>Physical <span><span class="value">{{ physical }}</span><span class="change">({{ sign_physical }}{{ change_physical }})</span></span></span>
                 <span>Knowledge <span><span class="value">{{ knowledge }}</span> <span class="change">({{ sign_knowledge }}{{ change_knowledge }})</span></span></span>
                 <span>Mental<span><span class="value">{{ mental }}</span><span class="change">({{ sign_mental }}{{ change_mental }})</span></span></span>
             </div>
         </div>
-
+        <script> 
+            document.getElementById('status-menu').addEventListener('click', function() {
+                window.location.href = '/dashboard';
+            });
+        </script>
         <!-- 버튼 -->
         <div class="Button">
             <div class="button-container d-flex">

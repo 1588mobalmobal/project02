@@ -7,10 +7,10 @@ import pandas as pd
 import sqlite3
 import datetime
 
-def create_dash_app(server):
+def create_dash_app(app):
     """Dash 앱을 생성하고 레이아웃과 콜백 함수를 정의합니다."""
 
-    dash_app = dash.Dash(__name__, server=server, url_base_pathname='/dashboard/')
+    dash_app = dash.Dash(__name__, server=app, url_base_pathname='/dashboard/')
 
     # 색상 팔레트 정의 (이미지에서 추출한 색상)
     colors = ['#98ddde', '#d99694', '#b3de69']
@@ -78,6 +78,13 @@ def create_dash_app(server):
         else:
             fig_bar = go.Figure(data=[go.Bar(x=[], y=[])])
 
+        # 막대 그래프 배경 및 그리드 제거
+        fig_bar.update_layout(
+            plot_bgcolor='rgba(0,0,0,0)',  # 배경색 투명하게 설정
+            paper_bgcolor='rgba(0,0,0,0)',  # 그래프 주변 배경색 투명하게 설정
+            yaxis=dict(gridcolor='rgba(0,0,0,0)')  # y축 그리드 제거
+        )
+
         # 누적 합계 계산 (선택된 날짜까지 또는 전체 데이터)
         df_cumsum = filtered_df.set_index('timestamp').cumsum().reset_index()
 
@@ -88,6 +95,13 @@ def create_dash_app(server):
         fig_cumulative.add_trace(go.Scatter(x=df_cumsum['timestamp'], y=df_cumsum['mental'], mode='lines+markers', name='Mental', marker_color='#b3de69'))
 
         fig_cumulative.update_layout(title='Cumulative Scores by Date', xaxis_title='Date', yaxis_title='Score')
+
+        # 누적 선 그래프 배경 및 그리드 제거
+        fig_cumulative.update_layout(
+            plot_bgcolor='rgba(0,0,0,0)',  # 배경색 투명하게 설정
+            paper_bgcolor='rgba(0,0,0,0)',  # 그래프 주변 배경색 투명하게 설정
+            yaxis=dict(gridcolor='rgba(0,0,0,0)')  # y축 그리드 제거
+        )
 
         # 누적 도넛 차트 생성 (선택된 날짜까지 또는 전체 데이터)
         total_physical = filtered_df['physical'].sum()
