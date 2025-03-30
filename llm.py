@@ -11,7 +11,7 @@ llm_instance = None
 def init_llm():
     global llm_instance
     if llm_instance is None:
-        llm_instance = OllamaLLM(model="exaone3.5:2.4b", temperature=0.1, num_predict=150, format='json')  # num_predict 증가
+        llm_instance = OllamaLLM(model="exaone3.5:2.4b", temperature=0.1, num_predict=150, format='json')
     return llm_instance
 
 def get_log_response(user_input):
@@ -44,6 +44,7 @@ def parse_date_from_input(user_input):
 
 def get_chat_response(user_input, prompt_input, prev_input=None):
     model = init_llm()
+    today_date = datetime.now().strftime('%Y년 %m월 %d일')
 
     prompt = PromptTemplate.from_template(
         '''
@@ -51,17 +52,25 @@ def get_chat_response(user_input, prompt_input, prev_input=None):
         과거 기록: {past_logs}
         직전 질문: {prev_input}
         현재 질문: {user_input}
+        오늘 날짜: {today_date}
 
-        다음 지침을 따라 간결하게 답해:
-        1. "안녕" 같은 단순 인사면 직전 질문을 무시하고 "안녕!"처럼 간단히 답해.
-        2. 사용자가 "내가 방금 뭐 물어봤지?"처럼 직전 질문에 대해 묻거나 맥락을 이어가려 하면, {prev_input}을 보고 자연스럽게 대답해.
-        3. "오늘 일기"를 물으면 db.get_today_log(1)을 참고해서 답해.
-        4. 날짜(예: "3월 25일", "지난주")나 키워드(예: "운동")로 과거 일기를 물으면:
-           - 날짜가 있으면 "date": "YYYY-MM-DD" 형식으로 추출.
+        다음 지침을 따라 간결하게 답해. 지침 순서를 엄격히 지켜서 처리해:
+        1. "안녕" 같은 단순 인사면 직전 질문을 무시하고 "안녕!"처럼 간단히 답해. 다른 지침으로 넘기지 마.
+        2. "내가 방금 뭐 물어봤지?"처럼 직전 질문에 대해 묻거나 맥락을 이어가려 하면, {prev_input}을 보고 대답해. 다른 지침으로 넘기지 마.
+        3. "오늘 날짜가 뭐야?"처럼 현재 날짜를 물으면 {today_date}를 사용해서 답해. 다른 지침으로 넘기지 마.
+        4. "내 성격이 어때?"처럼 사용자의 성격을 물으면 {past_logs}를 보고 성격을 분석해서 답해. 다른 지침으로 넘기지 마.
+        5. "내일 계획을 추천해줄 수 있어?" 같은 일상적인 대화면 자연스럽게 대답하고, 일기 검색으로 넘기지 마.
+        6. "오늘 일기"를 물으면 db.get_today_log(1)을 참고해서 답해.
+        7. "3월 25일 일기 뭐야?"처럼 날짜로 과거 일기를 물으면:
+           - "date": "YYYY-MM-DD" 형식으로 추출.
+        8. "어깨운동을 언제 했어?"처럼 키워드와 날짜를 함께 묻으면, 키워드로 일기를 검색하고 그 날짜를 답해:
            - 키워드가 있으면 "keyword": 키워드로 추출.
-           - 둘 다 없으면 "date": "없음", "keyword": "없음".
-        5. 사용자의 말투(반말/존댓말)를 따라 하고, 한두 문장으로 끝낼 것.
-        6. 완전한 JSON 형식을 유지하고, 문자열이 중간에 끊기지 않게 해.
+        9. "운동 일기 뭐야?"처럼 키워드로 과거 일기를 물으면, 키워드로 일기를 검색하고 내용을 답해.
+        10. 키워드나 날짜가 없으면 "date": "없음", "keyword": "없음".
+        11. 필요한 정보가 부족하면 추가 질문을 요청해(예: "어떤 운동인지 더 구체적으로 알려줄래?").
+        12. 답을 할 수 없는 질문이면 "답을 할 수 없는 질문이야. 다른 질문을 해주세요!"라고 답해.
+        13. 사용자의 말투(반말/존댓말)를 따라 하고, 한두 문장으로 끝낼 것.
+        14. 완전한 JSON 형식을 유지해.
 
         출력 양식: 
         "reply": 답변,
@@ -74,34 +83,46 @@ def get_chat_response(user_input, prompt_input, prev_input=None):
         RunnableLambda(lambda x: {
             "past_logs": prompt_input if prompt_input else "과거 기록 없음",
             "prev_input": prev_input if prev_input else "없음",
-            "user_input": x
+            "user_input": x,
+            "today_date": today_date
         }),
         prompt,
         model
     )
 
-    # LLM 호출 및 예외 처리
     try:
         result = chain.invoke(user_input)
         response = json.loads(result)
     except json.JSONDecodeError:
-        # JSON 파싱 실패 시 기본 응답
         return json.dumps({"reply": "뭔가 잘못됐네, 다시 물어봐!", "date": "없음", "keyword": "없음"})
 
     reply = response["reply"]
     date = response.get("date", "없음")
     keyword = response.get("keyword", "없음")
 
-    # 일기 검색 로직
-    if "오늘 일기" in user_input:
-        today_log = db.get_today_log(1)
-        reply = f"오늘 너는 '{today_log}'라고 썼어." if today_log else "오늘 일기 없네."
-    elif date != "없음":
+    # 추가 로직: 프롬프트가 처리하지 못한 경우를 보완
+    if user_input.strip().lower() in ["안녕", "안녕!", "안녕?"]:
+        reply = "안녕!"
+    elif "내가 방금" in user_input and "뭐 물어봤지" in user_input:
+        reply = f"너 방금 '{prev_input}' 물어봤잖아." if prev_input else "직전 질문이 없네."
+    elif "오늘 날짜" in user_input:
+        reply = f"오늘은 {today_date}야!"
+    elif "내 성격" in user_input or "나 어때" in user_input:
+        # 프롬프트에서 처리하므로 reply 유지
+        pass
+    elif "일기" in user_input and date != "없음":
         parsed_date = parse_date_from_input(user_input) if date == "없음" else date
         if parsed_date:
             past_log = db.get_past_log_by_date(1, parsed_date)
             reply = f"그날 너는 '{past_log['content']}' 썼었어." if past_log else "그때 일기 못 찾겠네."
-    elif keyword != "없음":
+    elif "언제" in user_input and keyword != "없음":
+        past_log = db.get_past_log_by_keyword(1, keyword)  # 오타 수정
+        if past_log:
+            past_date = datetime.strptime(past_log["timestamp"], '%Y-%m-%dT%H:%M:%S.%f').strftime('%Y년 %m월 %d일')
+            reply = f"너는 {past_date}에 '{past_log['content']}' 썼었어."
+        else:
+            reply = "그런 일기 못 찾겠네."
+    elif "일기" in user_input and keyword != "없음":
         past_log = db.get_past_log_by_keyword(1, keyword)
         reply = f"그때 너는 '{past_log['content']}' 썼었어." if past_log else "그때 일기 못 찾겠네."
 
