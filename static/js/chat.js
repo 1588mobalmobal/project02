@@ -50,6 +50,10 @@ function get_response(user_input){
     .then(data => {
         const reply_message = JSON.parse(data).reply;
         create_chat_div(reply_message, 'start')
+        window.scrollTo({
+            top: document.body.scrollHeight,
+            behavior: "smooth"
+          })
     })
     .catch(error => {
         console.error("POST 요청 실패:", error)

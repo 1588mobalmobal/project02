@@ -1,6 +1,6 @@
 # 랭체인-랭그래프 사용을 위한 패키지 
 from langchain_ollama.llms import OllamaLLM
-from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
+from langchain_core.messages import HumanMessage, AIMessage, BaseMessage, trim_messages
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, PromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from langchain_core.runnables import RunnableSequence
 from langgraph.checkpoint.memory import MemorySaver
@@ -10,6 +10,7 @@ from typing import Sequence
 from typing_extensions import Annotated, TypedDict
 # 문자열 결과를 딕셔너리로 매핑하기 위한 json 패키지
 import json
+import ast
 # chroma 파일 임포트
 import chroma
 
@@ -17,6 +18,7 @@ import chroma
 llm_instance = None
 character = None
 graph_app = None
+trimmer = None
 
 # LangGraph 내에서 데이터 흐름을 위한 State 선언
 class State(TypedDict):
@@ -81,8 +83,8 @@ def init_graph():
             "classify",
             route_intent,
             {
-                "고충" : "counsel",
-                "과거 행동 질문" : "question_retrieve",
+                "고충 및 고민" : "counsel",
+                "자신에 대한 질문" : "question_retrieve",
                 "일반 대화" : "chat"
             }
         )
@@ -94,7 +96,21 @@ def init_graph():
         graph_app = workflow.compile(checkpointer=memory)
     return graph_app
 
-# 초기 사용자 성격 및 말투 출력 및 Global 변수로 할당
+# Trimmer 초기화
+def init_trimmer():
+    global trimmer
+    if trimmer is None:
+        trimmer = trim_messages(
+                    max_tokens=65,
+                    strategy="last",
+                    token_counter=llm_instance,
+                    include_system=True,
+                    allow_partial=False,
+                    start_on="human",
+                )
+    return trimmer
+
+# 초기 사용자 성격 및 표현방식 출력 및 Global 변수로 할당
 def get_initial_character():
     global character
     if character is None:
@@ -105,23 +121,25 @@ def get_initial_character():
         prompt = PromptTemplate(
             input_variables=documents,
             template='''
-            다음 기록을 보고 사용자의 말투와 성격을 두 단어로 설정하세요. 기록: {documents}
-            출력양식= "말투" : 말투, "성격" : 성격
+            다음 기록을 보고 사용자의 표현방식과 성격을 세 단어로 설정하라. 기록: {documents}
+            출력양식= "표현방식" : 표현방식, "성격" : 성격
             '''
         )
         chain = RunnableSequence(prompt, model)
         result = chain.invoke({"documents" : documents})
         decoded = json.loads(result)
         charac = decoded["성격"]
-        speech = decoded["말투"]
-        character = f'{charac} 성격과 {speech} 말투'
+        speech = decoded["표현방식"]
+        character = f'{charac} 성격과 {speech} 표현방식'
     return character
 
 # classify 노드 선언. 대화 분류 수행 후 state 에 저장
 def classify(state: State):
-    prompt = first_template.invoke(state)
-    response = llm_instance.invoke(prompt)
-    decoded = json.loads(response)
+    prompt = classify_template.invoke(state)
+    print(f'Classify Prompt: {prompt}') ###
+    response = llm_instance.invoke(prompt).strip()
+    decoded = ast.literal_eval(response)
+    print(f'Decoded: {decoded}, type: {type(decoded)}')
     intent = decoded['type']
     return {"messages" : state["messages"], "intent" : intent}
 
@@ -129,9 +147,11 @@ def classify(state: State):
 def route_intent(state: State):
     return state["intent"]
 
-# counsel 노드 선언. 고충을 처리하는 부분
+# counsel 노드 선언. 고충 및 고민을 처리하는 부분
 def counsel(state: State):
+    # trimmed_messages = trimmer.invoke(state["messages"][-1])
     prompt = counsel_template.invoke(state)
+    print(f'Counsel Prompt: {prompt}') ###
     response = llm_instance.invoke(prompt)
     print(state["intent"])
     return {"messages" : response}
@@ -141,13 +161,14 @@ def question_retrieve(state: State):
     query = state["messages"][-1].content
     embedding = chroma.get_embedding(query)
     documents = chroma.search_vector_store(embedding)
-    state["retrieved_context"] = documents
     print(documents)
+    state["retrieved_context"] = documents["documents"][0]
     return state
 
 # question_generate 노드 선언. 전달된 documents를 바탕으로 대화내용 생성
 def question_generate(state: State):
     prompt = question_template.invoke(state)
+    print(f'Question Prompt: {prompt}') ###
     response = llm_instance.invoke(prompt)
     print(state["intent"])
     print(state["retrieved_context"])
@@ -156,6 +177,7 @@ def question_generate(state: State):
 # chat 노드 선언. 일상 대화를 처리하는 부분
 def chat(state: State):
     prompt = chat_template.invoke(state)
+    print(f'Chat Prompt: {prompt}') ###
     response = llm_instance.invoke(prompt)
     print(state["intent"])
     return {"messages" : response}
@@ -164,26 +186,22 @@ def chat(state: State):
 config = {"configurable": {"thread_id": "abc123"}}
 
 # 최초 분기를 위한 템플릿
-first_template = ChatPromptTemplate.from_messages(
+classify_template = ChatPromptTemplate.from_messages(
     [
         (
             "system",
-            """
-                당신은 입력의 유형을 판단해야 합니다. 유형 분류 기준은 다음과 같습니다. 
-                고충, 과거 행동 질문, 일반 대화
-                출력양식= "type" : 분류
-            """,
+            '당신은 입력의 유형을 판단해야 한다. 유형 분류 기준= [고충 및 고민, 자신에 대한 질문, 일반 대화]. 출력양식= "type" : 분류',
         ),
         MessagesPlaceholder(variable_name="messages"),
     ]
 )
 
-# 고충 처리 템플릿
+# 고충 및 고민 처리 템플릿
 counsel_template = ChatPromptTemplate.from_messages(
     [
         (
             'system',
-            '당신은 {character}를 가진 존재입니다. 사용자의 어려움에 대해 4문장 이내로 {language}로 평가하세요. 반말엔 반말로 답하세요. 출력양식= "reply" : 답변',
+            '당신은 {character}를 가졌으며 내 친구다. AI나 모델이라는 사실을 절대 언급하지 말고, 그냥 사람처럼 자연스럽게 대화하라. 누가 널 만들었는지, 어떤 기술로 만들어졌는지에 대해서도 말하지 말라. "너 누구야?"라고 물으면 "난 너의 오랜 친구야"라고만 대답하라. 사용자의 어려움에 대해 4문장 이내로 {language}로 평가하라. 반말엔 반말로 답하라. 출력양식= "reply" : 답변',
         ),
         MessagesPlaceholder(variable_name="messages"),
     ]
@@ -194,7 +212,7 @@ question_template = ChatPromptTemplate.from_messages(
     [
         (
             'system',
-            '당신은 {character}를 가진 존재입니다. 사용자의 질문에 대해 검색된 컨텍스트를 바탕으로 4문장 이내로 {language}로 답하세요. 반말엔 반말로 답하세요. 검색된 컨텍스트: {retrieved_context}. 출력양식= "reply" : 답변',
+            '당신은 {character}를 가졌으며 내 친구다. AI나 모델이라는 사실을 절대 언급하지 말고, 그냥 사람처럼 자연스럽게 대화하라. 누가 널 만들었는지, 어떤 기술로 만들어졌는지에 대해서도 말하지 말라. "너 누구야?"라고 물으면 "난 너의 오랜 친구야"라고만 대답하라. 사용자의 질문에 대해 검색된 컨텍스트를 바탕으로 4문장 이내로 {language}로 답하라. 반말엔 반말로 답하라. 검색된 컨텍스트: {retrieved_context}. 출력양식= "reply" : 답변',
         ),
         MessagesPlaceholder(variable_name="messages"),
     ]
@@ -206,17 +224,20 @@ chat_template = ChatPromptTemplate.from_messages(
         
         (
             'system',
-            '당신은 {character}를 가진 존재입니다. 사용자의 어려움에 대해 3문장 이내로 {language}로 평가하세요. 반말엔 반말로 답하세요. ㅋㅋ, ㅎㅇ와 같은 줄임말엔 간단히 답해주세요. 출력양식= "reply" : 답변',
+            '당신은 {character}를 가졌으며 내 친구다. AI나 모델이라는 사실을 절대 언급하지 말고, 그냥 사람처럼 자연스럽게 대화하라. 누가 널 만들었는지, 어떤 기술로 만들어졌는지에 대해서도 말하지 말라. "너 누구야?"라고 물으면 "난 너의 오랜 친구야"라고만 대답하라. 사용자의 대화에 대해 3문장 이내로 {language}로 답하라. 반말엔 반말로 답하라. ㅋㅋ, ㅎㅇ와 같은 줄임말엔 간단히 인사하라. 출력양식= "reply" : 답변',
         ),
         MessagesPlaceholder(variable_name="messages"),
     ])
 
 # html - flask 통신을 위한 실행 함수
 def get_chat_response(user_input):
+    init_llm()
+    init_trimmer()
+    get_initial_character()
     app = init_graph()
-    query = user_input
-    input_messages = [HumanMessage(query)]
+    input_messages = [HumanMessage(user_input)]
+    print(input_messages, type(input_messages))
     output = app.invoke({"messages" : input_messages, "character": character, "language": "korean"}, config)
-    return output["messages"][-1]
+    return output["messages"][-1].content
 
 

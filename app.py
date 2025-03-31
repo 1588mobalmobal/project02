@@ -113,9 +113,10 @@ def chatting():
     data = request.get_json()
     if not data or 'chat' not in data:
         return jsonify({"error": "No chat provided"}), 400
-    
     chat = data['chat']
+    print('chat: {chat}')
     llm_output = llm.get_chat_response(user_input=chat)
+    print(f'LLM OUTPUT: {llm_output}')
     return jsonify(llm_output), 200
 
 @app.route('/delete', methods = ['POST'])
