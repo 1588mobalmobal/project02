@@ -74,6 +74,7 @@ def handle_llm_request():
     else:
         log_count = 0
     
+    # chunks = user_input.split(".").trim()
     embedding = chroma.get_embedding(user_input)
     chroma.store_vector(user_input, embedding, log_count)
 
@@ -114,11 +115,7 @@ def chatting():
         return jsonify({"error": "No chat provided"}), 400
     
     chat = data['chat']
-    embedding = chroma.get_embedding(chat)
-    result = chroma.search_vector_store(embedding)
-    logs = db.get_log_by_vector(result['ids'])
-    print(logs)
-    llm_output = llm.get_chat_response(user_input=chat, prompt_input=logs)
+    llm_output = llm.get_chat_response(user_input=chat)
     return jsonify(llm_output), 200
 
 @app.route('/delete', methods = ['POST'])

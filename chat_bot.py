@@ -1,67 +1,35 @@
-# 랭체인-랭그래프 사용을 위한 패키지 
 from langchain_ollama.llms import OllamaLLM
 from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, PromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, PromptTemplate
 from langchain_core.runnables import RunnableSequence
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import START, MessagesState, StateGraph, END
 from langgraph.graph.message import add_messages
-from typing import Sequence
-from typing_extensions import Annotated, TypedDict
-# 문자열 결과를 딕셔너리로 매핑하기 위한 json 패키지
-import json
-# chroma 파일 임포트
+
 import chroma
 
-# 전역 인스턴스 선언
+
+import json
+from typing import Sequence
+from typing_extensions import Annotated, TypedDict
+
 llm_instance = None
-character = None
 graph_app = None
+character = None
 
-# LangGraph 내에서 데이터 흐름을 위한 State 선언
 class State(TypedDict):
-    messages: Annotated[Sequence[BaseMessage], add_messages] # Annotated 로 감싸서 add_messages 함수를 변수로 전달하면 과거 메세지를 추가함
-    character: str # 성격을 담는 변수
-    intent : str # 입력의 종류를 구분하는 변수
-    language : str # 출력 언어 변수
-    retrieved_context : str # 벡터 스토어 검색 결과를 저장하는 변수
+    messages: Annotated[Sequence[BaseMessage], add_messages]
+    character: str
+    intent : str
+    language : str
+    retrieved_context : str
 
-# LLM 모델 초기화
 def init_llm():
     global llm_instance
     if llm_instance is None:
         llm_instance = OllamaLLM(model="exaone3.5:7.8b", temperature=0.1, num_predict=256, format='json')
     return llm_instance
 
-# 입력된 일기의 점수와 조언을 제공하는 모델
-def get_log_response(user_input):
-    # 로컬 Ollama 모델 설정 (예: 'llama3' 모델 사용)
-    model = init_llm()
-    system_message_prompt = SystemMessagePromptTemplate.from_template(
-        '''
-    당신은 사용자의 일기를 받아 조언을 해주는 동반자입니다.
-    친근한 경어로 한 문장으로 일기 내용을 평가한 후, 한 문장으로 조언을 해주세요.
-    그 후 일기를 다음 세가지 분류에 따라 점수를 매겨주세요.
-    체력: 운동활동 미수행=0점 / 중간 강도 운동 수행=1점 / 강하고 힘든 강도 운동 수행=2점
-    지식: 학습활동 미수행=0점 / 중간 강도 학습활동 수행=1점 / 고강도 학습활동 수행=2점
-    정신력: 정신적-육체적 에너지 미소모=0점 / 불편과 번거로움을 극복=1점 / 가혹한 환경을 극복=2점
-    출력 양식:
-    ["격려" : 격려 내용, "조언" : 조언 내용, "체력" : 체력 점수, "지식" : 지식 점수, "정신력" : 정신력 점수]
-    '''
-    )
-    human_message_prompt = HumanMessagePromptTemplate.from_template('{text}')
-
-    chat_prompt = ChatPromptTemplate.from_messages(
-    [system_message_prompt, human_message_prompt]
-    )
-
-    chain = chat_prompt | model
-
-    response = chain.invoke(user_input)
-
-    return response
-
-# LangGraph 객체 컴파일 및 초기화
 def init_graph():
     global graph_app
     if graph_app is None:
@@ -94,7 +62,6 @@ def init_graph():
         graph_app = workflow.compile(checkpointer=memory)
     return graph_app
 
-# 초기 사용자 성격 및 말투 출력 및 Global 변수로 할당
 def get_initial_character():
     global character
     if character is None:
@@ -115,9 +82,12 @@ def get_initial_character():
         charac = decoded["성격"]
         speech = decoded["말투"]
         character = f'{charac} 성격과 {speech} 말투'
-    return character
+    return 
 
-# classify 노드 선언. 대화 분류 수행 후 state 에 저장
+def route_intent(state: State):
+    return state["intent"]
+
+# 대화 분류 
 def classify(state: State):
     prompt = first_template.invoke(state)
     response = llm_instance.invoke(prompt)
@@ -125,18 +95,12 @@ def classify(state: State):
     intent = decoded['type']
     return {"messages" : state["messages"], "intent" : intent}
 
-# classify 함수를 통화 후 intent 값을 저장한 state의 값을 조회 
-def route_intent(state: State):
-    return state["intent"]
-
-# counsel 노드 선언. 고충을 처리하는 부분
 def counsel(state: State):
     prompt = counsel_template.invoke(state)
     response = llm_instance.invoke(prompt)
     print(state["intent"])
     return {"messages" : response}
 
-# questoin_retrieve 노드 선언. 사용자의 질문과 관련된 vector document 조회
 def question_retrieve(state: State):
     query = state["messages"][-1].content
     embedding = chroma.get_embedding(query)
@@ -145,7 +109,6 @@ def question_retrieve(state: State):
     print(documents)
     return state
 
-# question_generate 노드 선언. 전달된 documents를 바탕으로 대화내용 생성
 def question_generate(state: State):
     prompt = question_template.invoke(state)
     response = llm_instance.invoke(prompt)
@@ -153,17 +116,21 @@ def question_generate(state: State):
     print(state["retrieved_context"])
     return {"messages" : response}
 
-# chat 노드 선언. 일상 대화를 처리하는 부분
 def chat(state: State):
     prompt = chat_template.invoke(state)
     response = llm_instance.invoke(prompt)
     print(state["intent"])
     return {"messages" : response}
 
-# 추후 다중 대화 지원을 위한 대화 세션 정보
+
+
+init_llm()
+init_graph()
+get_initial_character()
+
 config = {"configurable": {"thread_id": "abc123"}}
 
-# 최초 분기를 위한 템플릿
+
 first_template = ChatPromptTemplate.from_messages(
     [
         (
@@ -178,45 +145,38 @@ first_template = ChatPromptTemplate.from_messages(
     ]
 )
 
-# 고충 처리 템플릿
 counsel_template = ChatPromptTemplate.from_messages(
     [
         (
-            'system',
-            '당신은 {character}를 가진 존재입니다. 사용자의 어려움에 대해 4문장 이내로 {language}로 평가하세요. 반말엔 반말로 답하세요. 출력양식= "reply" : 답변',
+            "system",
+            "당신은 {character}를 가진 존재입니다. 사용자의 어려움에 대해 4문장 이내로 {language}로 평가하세요. 반말엔 반말로 답하세요.",
         ),
         MessagesPlaceholder(variable_name="messages"),
     ]
 )
 
-# 질문 처리 템플릿
 question_template = ChatPromptTemplate.from_messages(
     [
         (
-            'system',
-            '당신은 {character}를 가진 존재입니다. 사용자의 질문에 대해 검색된 컨텍스트를 바탕으로 4문장 이내로 {language}로 답하세요. 반말엔 반말로 답하세요. 검색된 컨텍스트: {retrieved_context}. 출력양식= "reply" : 답변',
+            "system",
+            "당신은 {character}를 가진 존재입니다. 사용자의 질문에 대해 검색된 컨텍스트를 바탕으로 4문장 이내로 {language}로 답하세요. 반말엔 반말로 답하세요. 검색된 컨텍스트: {retrieved_context}",
         ),
         MessagesPlaceholder(variable_name="messages"),
     ]
 )
 
-# 대화 처리 템플릿
 chat_template = ChatPromptTemplate.from_messages(
     [
         
         (
-            'system',
-            '당신은 {character}를 가진 존재입니다. 사용자의 어려움에 대해 3문장 이내로 {language}로 평가하세요. 반말엔 반말로 답하세요. ㅋㅋ, ㅎㅇ와 같은 줄임말엔 간단히 답해주세요. 출력양식= "reply" : 답변',
+            "system",
+            "당신은 {character}를 가진 존재입니다. 사용자의 어려움에 대해 3문장 이내로 {language}로 평가하세요. 반말엔 반말로 답하세요. ㅋㅋ, ㅎㅇ와 같은 줄임말엔 간단히 답해주세요",
         ),
         MessagesPlaceholder(variable_name="messages"),
     ])
 
-# html - flask 통신을 위한 실행 함수
-def get_chat_response(user_input):
-    app = init_graph()
-    query = user_input
-    input_messages = [HumanMessage(query)]
-    output = app.invoke({"messages" : input_messages, "character": character, "language": "korean"}, config)
-    return output["messages"][-1]
 
-
+query = "옛날에 나는 힘들 때 어떻게 했었어?"
+input_messages = [HumanMessage(query)]
+output = graph_app.invoke({"messages" : input_messages, "character": character, "language": "korean"}, config)
+output["messages"][-1].pretty_print()

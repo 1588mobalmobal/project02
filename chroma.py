@@ -21,11 +21,8 @@ def store_vector(user_input, embedding, vector_id):
     except:
         collection = client.create_collection(name="log_vector")
     collection.add(documents=user_input, embeddings=embedding[0], ids=f"{vector_id}")
-
-    data = collection.get(include=['embeddings', 'documents'])
-    print('--------------------------------------')
-    print(data)
-    print('--------------------------------------')
+    data = collection.get()
+    # print(data)
 
 def search_vector_store(embedding):
     client = chromadb.PersistentClient()
@@ -34,8 +31,18 @@ def search_vector_store(embedding):
     except:
         collection = client.create_collection(name="log_vector")
     result = collection.query(embedding, n_results=5)
-    print(result)
+    # print(result)
     return result
+
+def get_document_by_id(ids):
+    client = chromadb.PersistentClient()
+    try :
+        collection = client.get_collection(name="log_vector")
+    except:
+        collection = client.create_collection(name="log_vector")
+    result = collection.get(ids=ids)
+    return result
+        
 
 def delete_vector(vector_id):
     client = chromadb.PersistentClient()
@@ -45,6 +52,14 @@ def delete_vector(vector_id):
         collection = client.create_collection(name="log_vector")
     collection.delete(ids=[f'{vector_id}'])
     data = collection.get()
-    print('--------------------------------------')
-    print(data)
-    print('--------------------------------------')
+    # print(data)
+
+def get_vector_ids():
+    client = chromadb.PersistentClient()
+    try :
+        collection = client.get_collection(name="log_vector")
+    except:
+        collection = client.create_collection(name="log_vector")
+    data = collection.get()
+    ids = data['ids']
+    return ids
