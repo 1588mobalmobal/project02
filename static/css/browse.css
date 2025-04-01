@@ -1,0 +1,10 @@
+:root {--t1: #1f3038;
+    --t2: #2c3e50;
+    --t3: #086197;
+    --t4: #c6eeff;
+    --t5: #e2f6ff;
+    --t6: #ffffff;}
+
+#navbar {
+    background-color: var(--t5);
+}

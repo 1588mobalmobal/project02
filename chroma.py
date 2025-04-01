@@ -21,8 +21,7 @@ def store_vector(user_input, embedding, vector_id):
     except:
         collection = client.create_collection(name="log_vector")
     collection.add(documents=user_input, embeddings=embedding[0], ids=f"{vector_id}")
-    data = collection.get()
-    print(f'Vector Store : {data}')
+    print(f'Stored Vector Id: {vector_id}')
 
 def search_vector_store(embedding):
     client = chromadb.PersistentClient()

@@ -34,6 +34,11 @@ function get_response(user_input){
     };
 
     let temp_message = create_chat_div("생성 중...", "start")
+
+    window.scrollTo({
+        top: document.body.scrollHeight,
+        behavior: "smooth"
+      })
     
     fetch("http://127.0.0.1:5252/api/chat", {
         method: "POST",

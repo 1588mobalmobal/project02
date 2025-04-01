@@ -125,7 +125,6 @@ def delete_log():
     data = request.get_json()
     if not data :
         return jsonify({"error": "No data provided"}), 400
-    print(data)
     user_id = 1
     log_id = data['id']
     vector_id = db.delete_log(user_id, log_id)

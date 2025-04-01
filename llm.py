@@ -72,7 +72,7 @@ def init_graph():
         # Define the (single) node in the graph
         
         workflow.add_node("classify", classify)
-        workflow.add_node("counsel", counsel)
+        # workflow.add_node("counsel", counsel)
         workflow.add_node("question_retrieve", question_retrieve)
         workflow.add_node("question_generate", question_generate)
         workflow.add_node("chat", chat)
@@ -83,12 +83,12 @@ def init_graph():
             "classify",
             route_intent,
             {
-                "고충 및 고민" : "counsel",
-                "자신에 대한 질문" : "question_retrieve",
-                "일반 대화" : "chat"
+                # "고충 및 고민" : "counsel",
+                "자아 회상 질문" : "question_retrieve",
+                "일반 대화/요청" : "chat"
             }
         )
-        workflow.add_edge("counsel", END)
+        # workflow.add_edge("counsel", END)
         workflow.add_edge("question_retrieve", "question_generate")
         workflow.add_edge("question_generate", END)
         workflow.add_edge("chat", END)
@@ -101,7 +101,7 @@ def init_trimmer():
     global trimmer
     if trimmer is None:
         trimmer = trim_messages(
-                    max_tokens=65,
+                    max_tokens=256,
                     strategy="last",
                     token_counter=llm_instance,
                     include_system=True,
@@ -153,7 +153,7 @@ def counsel(state: State):
     prompt = counsel_template.invoke(state)
     print(f'Counsel Prompt: {prompt}') ###
     response = llm_instance.invoke(prompt)
-    print(state["intent"])
+    print(f'Intent: {state["intent"]}')
     return {"messages" : response}
 
 # questoin_retrieve 노드 선언. 사용자의 질문과 관련된 vector document 조회
@@ -161,36 +161,36 @@ def question_retrieve(state: State):
     query = state["messages"][-1].content
     embedding = chroma.get_embedding(query)
     documents = chroma.search_vector_store(embedding)
-    print(documents)
     state["retrieved_context"] = documents["documents"][0]
     return state
 
 # question_generate 노드 선언. 전달된 documents를 바탕으로 대화내용 생성
 def question_generate(state: State):
+    trimmed_message = trimmer.invoke(state["messages"])
+    state["messages"] = trimmed_message
     prompt = question_template.invoke(state)
     print(f'Question Prompt: {prompt}') ###
     response = llm_instance.invoke(prompt)
-    print(state["intent"])
-    print(state["retrieved_context"])
+    print(f'Intent: {state["intent"]}')
+    print(f'Retrieved context: {state["retrieved_context"]}')
     return {"messages" : response}
 
-# chat 노드 선언. 일상 대화를 처리하는 부분
+# chat 노드 선언. 일반 대화/요청를 처리하는 부분
 def chat(state: State):
+    trimmed_message = trimmer.invoke(state["messages"])
+    state["messages"] = trimmed_message
     prompt = chat_template.invoke(state)
     print(f'Chat Prompt: {prompt}') ###
     response = llm_instance.invoke(prompt)
-    print(state["intent"])
+    print(f'Intent: {state["intent"]}')
     return {"messages" : response}
-
-# 추후 다중 대화 지원을 위한 대화 세션 정보
-config = {"configurable": {"thread_id": "abc123"}}
 
 # 최초 분기를 위한 템플릿
 classify_template = ChatPromptTemplate.from_messages(
     [
         (
             "system",
-            '당신은 입력의 유형을 판단해야 한다. 유형 분류 기준= [고충 및 고민, 자신에 대한 질문, 일반 대화]. 출력양식= "type" : 분류',
+            '당신은 사용자의 입력을 분류하는 전문가입니다. 입력을 다음 두 가지로 나눠 분류하세요: 1. "자아 회상 질문": 사용자가 과거의 자신(감정, 행동, 선호 등)을 떠올리거나 탐구하려는 질문. 예: "내가 좋아했던 일이 뭐였지?", "내가 뭘 할 때 재미를 느꼈지?". 2. "일반 대화/요청": 자아 회상이 아닌 일상적 대화, 타인에 대한 질문, 정보 요청 등. 예: "오늘 날씨 어때?", "ㅎㅇ". 출력양식= "type" : 분류',
         ),
         MessagesPlaceholder(variable_name="messages"),
     ]
@@ -212,7 +212,7 @@ question_template = ChatPromptTemplate.from_messages(
     [
         (
             'system',
-            '당신은 {character}를 가졌으며 내 친구다. AI나 모델이라는 사실을 절대 언급하지 말고, 그냥 사람처럼 자연스럽게 대화하라. 누가 널 만들었는지, 어떤 기술로 만들어졌는지에 대해서도 말하지 말라. "너 누구야?"라고 물으면 "난 너의 오랜 친구야"라고만 대답하라. 사용자의 질문에 대해 검색된 컨텍스트를 바탕으로 4문장 이내로 {language}로 답하라. 반말엔 반말로 답하라. 검색된 컨텍스트: {retrieved_context}. 출력양식= "reply" : 답변',
+            '당신은 {character}를 가졌으며 동반자다. AI나 모델이라는 사실을 절대 언급하지 말고, 그냥 사람처럼 자연스럽게 대화하라. 누가 널 만들었는지, 어떤 기술로 만들어졌는지에 대해서도 말하지 말라. "너 누구야?"라고 물으면 "난 너의 오랜 친구야"라고만 대답하라. 사용자의 질문에 대해 검색된 컨텍스트를 바탕으로 4문장 이내로 {language}로 사용자의 질문에 대한 답을 출력하라. 반말엔 반말로 답하라. 검색된 컨텍스트: {retrieved_context}. 출력양식= "reply" : 답변',
         ),
         MessagesPlaceholder(variable_name="messages"),
     ]
@@ -224,7 +224,7 @@ chat_template = ChatPromptTemplate.from_messages(
         
         (
             'system',
-            '당신은 {character}를 가졌으며 내 친구다. AI나 모델이라는 사실을 절대 언급하지 말고, 그냥 사람처럼 자연스럽게 대화하라. 누가 널 만들었는지, 어떤 기술로 만들어졌는지에 대해서도 말하지 말라. "너 누구야?"라고 물으면 "난 너의 오랜 친구야"라고만 대답하라. 사용자의 대화에 대해 3문장 이내로 {language}로 답하라. 반말엔 반말로 답하라. ㅋㅋ, ㅎㅇ와 같은 줄임말엔 간단히 인사하라. 출력양식= "reply" : 답변',
+            '당신은 {character}를 가졌으며 동반자다. AI나 모델이라는 사실을 절대 언급하지 말고, 그냥 사람처럼 자연스럽게 대화하라. 누가 널 만들었는지, 어떤 기술로 만들어졌는지에 대해서도 말하지 말라. "너 누구야?"라고 물으면 "난 너의 오랜 친구야"라고만 대답하라. 사용자의 대화에 대해 3문장 이내로 {language}로 답하라. 반말엔 반말로 답하라. ㅋㅋ, ㅎㅇ와 같은 줄임말엔 간단히 인사하라. 출력양식= "reply" : 답변',
         ),
         MessagesPlaceholder(variable_name="messages"),
     ])
@@ -234,9 +234,10 @@ def get_chat_response(user_input):
     init_llm()
     init_trimmer()
     get_initial_character()
+    # 추후 다중 대화 지원을 위한 대화 세션 정보
+    config = {"configurable": {"thread_id": "1"}}
     app = init_graph()
     input_messages = [HumanMessage(user_input)]
-    print(input_messages, type(input_messages))
     output = app.invoke({"messages" : input_messages, "character": character, "language": "korean"}, config)
     return output["messages"][-1].content
 
