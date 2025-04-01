@@ -74,6 +74,7 @@ def handle_llm_request():
     else:
         log_count = 0
     
+    print(f'Log ID number : {log_count}')
     # chunks = user_input.split(".").trim()
     embedding = chroma.get_embedding(user_input)
     chroma.store_vector(user_input, embedding, log_count)
