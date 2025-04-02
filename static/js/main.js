@@ -177,4 +177,12 @@
   window.addEventListener('load', navmenuScrollspy);
   document.addEventListener('scroll', navmenuScrollspy);
 
+  document.getElementById('status-menu').addEventListener('click', function() {
+    window.location.href = '/dashboard';
+});
+
 })();
+
+
+
+        

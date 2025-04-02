@@ -3,6 +3,7 @@ import json
 import db
 import llm
 import chroma
+import visualization
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -12,6 +13,8 @@ app = Flask(__name__)
 user_id = 1
 
 db.init_db()
+
+dash_app = visualization.create_dash_app(app)
 
 @app.route('/', methods=['GET'])
 def home():
@@ -130,6 +133,12 @@ def delete_log():
     vector_id = db.delete_log(user_id, log_id)
     chroma.delete_vector(vector_id)
     return jsonify("delete success"), 200
+
+@app.route('/dashboard')
+def dashboard():
+    # user_id = request.args.get('user_id')
+    dash_app_html = dash_app.index()
+    return dash_app_html
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5252, debug=True)

@@ -27,7 +27,7 @@
 
         <!-- 상태창 -->
         <div class="Status-Memu-Container">
-            <div class="Status-Memu">
+            <div class="Status-Memu" id="status-menu">
                 <span>Physical <span><span class="value">{{ physical }}</span><span class="change">({{ sign_physical }}{{ change_physical }})</span></span></span>
                 <span>Knowledge <span><span class="value">{{ knowledge }}</span> <span class="change">({{ sign_knowledge }}{{ change_knowledge }})</span></span></span>
                 <span>Mental<span><span class="value">{{ mental }}</span><span class="change">({{ sign_mental }}{{ change_mental }})</span></span></span>
@@ -52,5 +52,10 @@
 
     <!-- Bootstrap 5 JS (Popper.js 포함) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script>
+        document.getElementById('status-menu').addEventListener('click', function() {
+            window.location.href = '/dashboard';
+            });
+    </script>
 </body>
 </html>
